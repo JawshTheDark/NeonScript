@@ -1,6 +1,6 @@
 # NeonScript - roadmap from your wish list
 
-Built from your ticks in [FEATURES.md](FEATURES.md). Nothing here has been started. Order is my
+Built from your ticks in [FEATURES.md](FEATURES.md). Phases 1-2 are done, Phase 3 is under way. Order is my
 proposal - tell me what to move.
 
 ## What I took from your answers
@@ -84,6 +84,38 @@ release packaging (`tools/build_release.py`, `tools/install.ps1`), MIT licence, 
 ### Phase 7 - Fun and extras
 Quote database, karma/seen/last-spoke, polls, small games (M each, S for karma), `/np` now playing
 (window title via COM/PowerShell - no DLL needed), weather/define/translate cards `(web)`.
+
+### Phase 8 - Windows integration  (added 2026-10-01 - "possible now" list, all yes)
+No DLL: the same hidden-PowerShell-helper pattern the media buttons use.
+| Item | Size | Notes |
+|---|---|---|
+| Phone push when mentioned while away | M `(web)` | ntfy.sh / Pushover / Discord-style webhook over HTTPS; topic or key stored encrypted; only while away or idle; message text optional (privacy switch). |
+| Windows toast notifications | M | Mentions and PMs as real toasts (click to jump), respects Do not disturb. |
+| Speak mentions (text-to-speech) | S | SAPI voice, per-channel opt-in. |
+| Speech to text (dictate into the editbox) | M `(exp)` | Windows speech recognition through the helper. |
+| Paste / image upload helper | M `(web)` | `/paste`, clipboard image or file to a host you choose, link dropped in the editbox. |
+| Taskbar progress and unread badge | S | |
+
+### Phase 9 - More IRCv3  (needs the server to offer it; mock-tested, then tried on Lurker)
+Typing indicators, read markers (`draft/read-marker`), message edit and redaction display, `account-notify` /
+`extended-join` (account names in the nick list and WHOIS), `chathistory` on demand ("load older messages").
+
+### Phase 10 - Opt-in AI helpers  (nothing is sent anywhere until you ask)
+| Item | Notes |
+|---|---|
+| Catch me up | Summarise what you missed in a window or across the mentions inbox. |
+| Translate line / selection | |
+| Moderation assist | Flags likely spam/flood/ban-evasion and suggests an action; never acts by itself. |
+| Plain-English commands | "kick the clones and ban their host" -> a command preview you confirm. |
+Provider is your choice: a local model (Ollama on localhost) or an API key kept encrypted by `neonsec.dll`.
+Text leaves your PC only when you press the button, and the dialog says exactly what is being sent.
+
+### Phase 11 - Native UI layer  (the only phase that needs a purpose-built DLL; I write it, source in `native/`)
+Avatars and rank icons in the nick list, rich message cards, an emoji picker and optional web-style panels
+(WebView2 ships with Windows 11). 32-bit like mIRC, hash-checked like `neonsec.dll`, off if missing.
+
+### Phase 12 - Sync
+Settings sync through a folder you choose (OneDrive, Dropbox, a git checkout): encrypted secrets stay on the PC.
 
 ## Tokens: how to protect them without (probably) a DLL
 
