@@ -76,6 +76,18 @@ Right-click any toolbar button for its own menu.
   mIRC already asks for server-time, message-tags, away-notify, account-notify, extended-join, multi-prefix and batch itself;
   NeonScript asks for the three draft ones when the server offers them (`/neon ircextras` shows what is on).
 
+## AI helpers (optional, off by default)
+
+* **Nothing happens until you ask.** `/ai catchup` summarises a window you were away from, `/ai mentions` your unread mentions,
+  `/ai translate <language> [nick]` the last line, `/ai mod` looks for spam, flooding and harassment (it only suggests), and
+  `/ai do <request>` turns a plain-English request ("kick the flooder and quiet Zed for ten minutes") into commands.
+  A confirmation shows the destination and the exact text before anything is sent; the commands from `/ai do` are checked against a
+  short list of allowed shapes, shown, and need a second yes before they go into the normal throttled queue.
+* **Your choice of model**: Ollama on this PC or your network (the default - nothing leaves it), any OpenAI-compatible service, or
+  Anthropic. Control Panel > AI helpers holds the provider, model, address and key. The key is kept in `aikey.ini`, protected with
+  Windows DPAPI when `neonsec.dll` is installed, and is never part of a backup or a release.
+* Nicknames are replaced by `User1`, `User2` ... in the chat that is sent and put back in the answer (switchable).
+
 ## Fun and extras
 
 * **Channel extras** (part of the channel bot - switch it on in Control Panel > Channel commands): `!addquote` / `!quote [n | words]`

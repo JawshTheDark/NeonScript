@@ -99,7 +99,7 @@ No DLL: the same hidden-PowerShell-helper pattern the media buttons use.
 Typing indicators, read markers (`draft/read-marker`), message edit and redaction display, `account-notify` /
 `extended-join` (account names in the nick list and WHOIS), `chathistory` on demand ("load older messages").
 
-### Phase 10 - Opt-in AI helpers  (nothing is sent anywhere until you ask)
+### Phase 10 - Opt-in AI helpers  (DONE in 2026.12.0 - nothing is sent anywhere until you ask)
 | Item | Notes |
 |---|---|
 | Catch me up | Summarise what you missed in a window or across the mentions inbox. |

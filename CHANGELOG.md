@@ -2,6 +2,14 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.12.0
+
+* **AI helpers** (`/ai`, Control Panel > AI helpers, right-click menus): catch me up, unread-mentions summary, translate a line,
+  moderation check (suggestions only) and plain-English commands with a command preview. Off by default and strictly on request;
+  every request shows where it goes and exactly what is sent. Providers: Ollama (local), OpenAI-compatible, Anthropic.
+  The API key lives in `aikey.ini` (DPAPI-protected, excluded from backups and releases). Nicknames are anonymised in what is sent.
+* `ns.card` can now send a card to a named window (`%ns.card.win`), so a slow answer lands where the command was typed.
+
 ## 2026.11.0
 
 * **IRCv3 extras**: read markers, chat history on demand, deleted/edited message display, typing indicators in the nick list,

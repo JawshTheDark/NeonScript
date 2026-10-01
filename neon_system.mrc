@@ -359,6 +359,13 @@ alias neon.selftest {
     elseif ($ns.win.alive) ns.st.line ok Windows helper is running ( $+ $iif($ns.flag(toast,on,0),notifications) $+ $iif($ns.flag(speak,on,0),$chr(32) speech) $+ )
     else ns.st.line warn Windows helper is not running - /neon toast test starts it
   }
+  if ($isalias(ns.ai.on)) {
+    if (!$ns.ai.on) ns.st.line ok AI helpers: switched off (/ai on to use them)
+    elseif ($ns.ai.provider != ollama) && (!$ns.ai.haskey) ns.st.line warn AI helpers: no API key stored for $ns.ai.provider - Control Panel > AI helpers
+    elseif ($ns.ai.islocal) ns.st.line ok AI helpers: $ns.ai.provider at $ns.ai.host (this PC or network, model $ns.ai.model $+ )
+    else ns.st.line ok AI helpers: $ns.ai.provider at $ns.ai.host (text is sent only when you run a command, model $ns.ai.model $+ )
+    if (aikey isin $ns.bak.files) ns.st.line fail the AI key file would be part of a backup
+  }
 
   ns.st.head Commands
   %i = 1
@@ -669,7 +676,7 @@ alias neon.import {
   if (!%z) return
   var %why = $ns.bak.check(%z)
   if (%why) { ns.err cannot restore: %why | return }
-  if (!$input(Restore your NeonScript settings from $nopath(%z) $+ ? $+ $crlf $+ $crlf $+ Your current settings are saved first, and your saved passwords and tokens are kept.,yq,Restore backup)) return
+  if (!$input(Restore your NeonScript settings from $nopath(%z) $+ ? $+ $crlf $+ $crlf $+ Your current settings are saved first $+ $chr(44) and your saved passwords and tokens are kept.,yq,Restore backup)) return
   var %n = $ns.bak.import(%z)
   if (!%n) return
   ns.say restored %n files. Reloading...
@@ -732,7 +739,7 @@ alias ns.bak.delete {
 ; /neon repair stock    put mIRC's original colours / toolbar / aliases back (keeps NeonScript installed)
 alias neon.repair {
   if ($1 == stock) {
-    if (!$input(Put mIRC's original colours, toolbar and stock aliases back? $+ $crlf $+ NeonScript stays installed - /neon themes brings the look back.,yq,Restore the original look)) return
+    if (!$input(Put mIRC's original colours $+ $chr(44) toolbar and stock aliases back? $+ $crlf $+ NeonScript stays installed - /neon themes brings the look back.,yq,Restore the original look)) return
     ns.stock.restore
     return
   }

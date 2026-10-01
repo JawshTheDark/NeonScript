@@ -455,6 +455,12 @@ menu channel {
   .Text effects...:neon fx
   .Symbol map...:neon chars
   .Preview a link...:preview $$?="Link to preview (http:// or https://):"
+  AI helpers (opt-in)
+  .Catch me up on this channel:ai catchup
+  .Look for trouble (suggestions only):ai mod
+  .Plain-English command...:ai do $$?="What should be done in this channel?"
+  .Translate the last line...:ai translate $$?="Translate into which language?"
+  .AI settings...:ai settings
 }
 menu query {
   Whois:whois $$1 $$1
@@ -467,6 +473,9 @@ menu query {
   .Ignore manager...:neon ignores
   Tools
   .Text effects...:neon fx
+  AI helpers (opt-in)
+  .Translate the last line...:ai translate $$?="Translate into which language?"
+  .AI settings...:ai settings
 }
 menu status {
   Connect:ns.tb.connect
@@ -483,6 +492,10 @@ menu status {
   .Staff log...:neon stafflog
   .Channel stats...:neon stats
   .CTCP privacy...:neon privacy
+  AI helpers (opt-in)
+  .Summarise my unread mentions:ai mentions
+  .Ask a question...:ai ask $$?="Question for the AI service:"
+  .AI settings...:ai settings
   Maintenance
   .Self-test:neon selftest
   .Debug console:neon debug

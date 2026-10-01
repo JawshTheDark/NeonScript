@@ -75,6 +75,25 @@ alias ns.sec.convert {
     }
   }
   flushini $ns.profini
+  ; the AI helpers key lives in a file of its own (never in a backup)
+  %raw = $readini($ns.ai.keyfile,n,ai,key)
+  if (%raw != $null) {
+    if (%to == protect) && ($left(%raw,6) != dpapi:) {
+      %new = $ns.sec.enc(%raw)
+      if ($left(%new,6) == dpapi:) {
+        writeini -n $qt($ns.ai.keyfile) ai key %new
+        inc %n
+      }
+    }
+    elseif (%to == plain) && ($left(%raw,6) == dpapi:) {
+      %new = $ns.sec.dec(%raw)
+      if (%new != $null) {
+        writeini -n $qt($ns.ai.keyfile) ai key %new
+        inc %n
+      }
+    }
+    flushini $ns.ai.keyfile
+  }
   return %n
 }
 ; how many stored secrets are protected / plain:  $ns.sec.count(protected|plain)
@@ -92,6 +111,11 @@ alias ns.sec.count {
       if ($left(%raw,6) == dpapi:) inc %p
       else inc %q
     }
+  }
+  %raw = $readini($ns.ai.keyfile,n,ai,key)
+  if (%raw != $null) {
+    if ($left(%raw,6) == dpapi:) inc %p
+    else inc %q
   }
   return $iif($1 == protected,%p,%q)
 }

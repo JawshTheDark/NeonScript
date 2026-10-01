@@ -67,13 +67,15 @@ alias uptime echo -cat info $ns.pfx mIRC $duration($uptime(mirc,3)) $+ , system 
 ; a framed card:  ns.card <title> <line> <line> ...   (lines separated by chr(1) in $2-)
 alias ns.card {
   ; $1- = title chr(1) line chr(1) line ...
-  var %t = $gettok($1-,1,1), %lines = $gettok($1-,2-,1), %i = 1, %a = $ns.cc($ns.get(theme,accent,13)), %o = $ns.o, %n = $numtok(%lines,1)
-  echo -cat info $+(%a,$chr(9484),$chr(9472),$chr(9472),$chr(32),$ns.b,%t,$ns.b,$chr(32),$str($chr(9472),$max(2,$calc(34 - $len(%t)))),%o)
+  var %t = $gettok($1-,1,1), %lines = $gettok($1-,2-,1), %i = 1, %a = $ns.cc($ns.get(theme,accent,13)), %o = $ns.o, %n = $numtok(%lines,1), %e = echo -cat info
+  ; %ns.card.win (set just before the call) sends the card to a named window instead of the active one
+  if (%ns.card.win != $null) && ($window(%ns.card.win)) %e = echo -ct info %ns.card.win
+  %e $+(%a,$chr(9484),$chr(9472),$chr(9472),$chr(32),$ns.b,%t,$ns.b,$chr(32),$str($chr(9472),$max(2,$calc(34 - $len(%t)))),%o)
   while (%i <= %n) {
-    echo -cat info $+(%a,$chr(9474),%o,$chr(32),$gettok(%lines,%i,1))
+    %e $+(%a,$chr(9474),%o,$chr(32),$gettok(%lines,%i,1))
     inc %i
   }
-  echo -cat info $+(%a,$chr(9492),$str($chr(9472),36),%o)
+  %e $+(%a,$chr(9492),$str($chr(9472),36),%o)
 }
 ; percent-encode text for a URL (UTF-8)
 alias ns.urlenc {

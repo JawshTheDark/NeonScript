@@ -7,9 +7,15 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
+  if (%i == 1301) return ai;on;0;c
+  if (%i == 1303) return ai;provider;ollama;s;ollama,openai,anthropic
+  if (%i == 1305) return ai;model;_;e
+  if (%i == 1307) return ai;url;_;e
+  if (%i == 1310) return ai;confirm;1;c
+  if (%i == 1311) return ai;anon;1;c
   if (%i == 1102) return privacy;ctcp_mode;generic;s;normal,generic,silent
   if (%i == 1201) return toast;on;0;c
   if (%i == 1202) return toast;bg;1;c
@@ -95,6 +101,7 @@ alias -l optnames {
   if ($1 == 302) return Unicode symbols;Windows (ANSI) symbols;ASCII only
   if ($1 == 308) return Off;[HH:nn];[HH:nn:ss];(HH:nn);HH:nn
   if ($1 == 506) return Ignore them;Kick them (if I am an op);Ignore and kick
+  if ($1 == 1303) return Ollama (a model on this PC - nothing leaves it);OpenAI or compatible service;Anthropic
   if ($1 == 316) return Glossy (default);Flat;Outline;Mono
   if ($1 == 416) return Windows sounds (default);Chime;Arcade;Soft
   if ($1 == 1215) return POST (form upload);PUT (raw upload)
@@ -272,6 +279,24 @@ dialog ns_opt {
   button "Test voice", 1217, 166 196 50 12
   button "List voices", 1218, 220 196 50 12
 
+  ; ---- page 12 : AI helpers  (ids 1300-1399)
+  box "AI helpers (optional)", 1300, 82 38 266 172
+  check "Turn the AI helpers on (they only run when I ask: /ai or the right-click menu)", 1301, 92 50 254 9
+  text "Provider:", 1302, 92 66 34 9
+  combo 1303, 128 64 170 50, drop
+  text "Model (blank = default):", 1304, 92 82 76 9
+  edit "", 1305, 170 80 100 11
+  text "Address (blank = default):", 1306, 92 96 76 9
+  edit "", 1307, 170 94 172 11
+  text "API key:", 1308, 92 110 30 9
+  edit "", 1309, 124 108 150 11, pass
+  check "Ask me before anything is sent, and show exactly what", 1310, 92 124 250 9
+  check "Replace nicknames by User1, User2 ... in the chat that is sent", 1311, 92 137 250 9
+  text "With Ollama the text stays on your PC or network. Any other service receives what you send, under its own terms. Nothing is ever sent in the background, and a key is stored protected and never put in a backup.", 1312, 92 152 250 27
+  button "Test connection", 1313, 92 184 70 12
+  button "Get Ollama...", 1314, 166 184 60 12
+  button "Command help", 1315, 230 184 60 12
+
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
   check "Write a debug log (neon.log)", 801, 92 52 250 9
@@ -284,7 +309,7 @@ dialog ns_opt {
   text "NeonScript keeps its settings in neon.ini inside its own folder, so the whole pack stays portable.", 816, 92 112 250 20
 }
 
-alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows
+alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows ai
 
 on *:DIALOG:ns_opt:init:*:{
   did -g ns_opt 1 $ns.asset(header_options.png)
@@ -299,6 +324,7 @@ on *:DIALOG:ns_opt:init:*:{
   did -a ns_opt 2 Chat & reading
   did -a ns_opt 2 Privacy & safety
   did -a ns_opt 2 Windows integration
+  did -a ns_opt 2 AI helpers
   did -ra ns_opt 903 $ns.tag $+ $crlf $+ mIRC $version
   optload
   var %p = $findtok($pagekeys,%ns.optpage,1,32)
@@ -316,10 +342,11 @@ alias -l showpage {
     ns.didr -h ns_opt $+(%i,00) $+(%i,99)
     inc %i
   }
-  ns.didr -h ns_opt 1000 1299
+  ns.didr -h ns_opt 1000 1399
   if (%n == 9) ns.didr -v ns_opt 1000 1099
   elseif (%n == 10) ns.didr -v ns_opt 1100 1199
   elseif (%n == 11) ns.didr -v ns_opt 1200 1299
+  elseif (%n == 12) ns.didr -v ns_opt 1300 1399
   else ns.didr -v ns_opt $+(%n,00) $+(%n,99)
 }
 
@@ -359,6 +386,7 @@ alias -l optload {
     inc %i
   }
   did $iif($donotdisturb,-c,-u) ns_opt 405
+  did -ra ns_opt 1309 $iif($ns.ai.haskey,$ns.ai.mask,$null)
 }
 alias -l optsave {
   var %n = $numtok($opt.ids,32), %i = 1, %id, %r, %sec, %it, %def, %t, %vals, %k, %line, %txt
@@ -393,6 +421,11 @@ alias -l optsave {
     inc %i
   }
   if ($did(ns_opt,405).state != $donotdisturb) donotdisturb $iif($did(ns_opt,405).state,on,off)
+  ; the API key is not part of neon.ini: it only changes when the box no longer shows the placeholder
+  if ($did(ns_opt,1309).text != $iif($ns.ai.haskey,$ns.ai.mask,$null)) {
+    ns.ai.setkey $did(ns_opt,1309).text
+    did -ra ns_opt 1309 $iif($ns.ai.haskey,$ns.ai.mask,$null)
+  }
   ns.opt.after
 }
 
@@ -418,6 +451,9 @@ on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
 on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
 on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
 on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
+on *:DIALOG:ns_opt:sclick:1313:{ optsave | ns.later ai test }
+on *:DIALOG:ns_opt:sclick:1314:{ run https://ollama.com/download }
+on *:DIALOG:ns_opt:sclick:1315:{ neonhelp ai }
 on *:DIALOG:ns_opt:sclick:1114:{ neon stafflog }
 on *:DIALOG:ns_opt:sclick:1115:{ neon stats }
 on *:DIALOG:ns_opt:sclick:611:{ neon awaylog }

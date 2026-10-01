@@ -107,6 +107,15 @@
 /slap <nick>, /calc <expression>, /uptime, /lag|Small utilities
 /weather [-s] <city>, /define <word>|Web lookups - contact public services only when you run them
 Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank <nick> (enable in Control Panel)
+#AI helpers (opt-in, nothing is sent until you run one)
+/ai on, /ai off, /ai status|Switch the helpers on or off (off by default); /ai settings opens the Control Panel page
+/ai catchup [n] [#chan]|Summarise what you missed in a window (default the last 150 lines), nicknames sent as User1, User2 ...
+/ai mentions|Summarise your unread mentions inbox
+/ai translate <language> [nick]|Translate someone's last line (or the last line in the window)
+/ai mod [n]|Look for spam, flooding and harassment in a channel - suggestions only, nothing is done
+/ai do <request>|Plain-English moderation: shows the commands, asks, then queues them (kick, ban, quiet, mass, ignore, topic, mode only)
+/ai ask <question>|A plain question to the model (no chat is sent)
+/ai test, /ai key <key>|Check the connection; store an API key (protected, never in a backup)
 #Services
 /ns /cs /ms /hs /bs /os <text>|Message NickServ, ChanServ, MemoServ, HostServ, BotServ, OperServ
 /identify <pw>, /ghost <nick> [pw], /recover <nick>|NickServ shortcuts
