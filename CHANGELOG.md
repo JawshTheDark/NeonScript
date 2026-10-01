@@ -2,6 +2,15 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.9.0
+
+* **Theme editor** (`/neon themeedit`, Theme Gallery > Theme editor...): all 31 mIRC colour items and the 17 NeonScript event
+  colours with a live preview and palette, saved as your own themes (`themes_user.ini`), exportable as `.mts`.
+* **Event templates** (`/neon templates`, Control Panel > Display): edit how every kind of line is written, using the MTS
+  tokens, with a preview window; saved as `my_templates.mts`.
+* The picture windows used for charts and previews now ask for the frame's 16 x 39 pixels extra, so images come out at the
+  size they were designed for.
+
 ## 2026.8.0
 
 * **Icon sets**: flat, outline and mono variants of every toolbar icon, switchable live in Control Panel > Display.

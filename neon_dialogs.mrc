@@ -156,6 +156,7 @@ dialog ns_opt {
   edit "", 307, 230 153 22 11, limit 4
   text "users (0 = never)", 314, 256 155 84 9
   button "Theme gallery...", 315, 92 176 78 13
+  button "Event templates...", 318, 174 176 78 13
   text "Toolbar icons:", 317, 92 195 52 9
   combo 316, 148 193 110 60, drop
 
@@ -403,6 +404,7 @@ on *:DIALOG:ns_opt:sclick:112:{
 }
 on *:DIALOG:ns_opt:sclick:210:{ neon servers }
 on *:DIALOG:ns_opt:sclick:315:{ neon themes }
+on *:DIALOG:ns_opt:sclick:318:{ neon templates }
 on *:DIALOG:ns_opt:sclick:410:{ neon sounds }
 on *:DIALOG:ns_opt:sclick:411:{ neon testsound }
 on *:DIALOG:ns_opt:sclick:520:{ neon users }

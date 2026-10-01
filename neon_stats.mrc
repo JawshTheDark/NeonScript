@@ -199,7 +199,10 @@ alias -l csdraw {
   var %s = $1, %w = 620, %h = 124, %h24 = 0, %max = 1, %v, %bw = $calc(%w / 24), %bh, %x, %col, %f = $ns.data(tmp\stats_hours.bmp), %hh
   .mkdir $qt($ns.data(tmp))
   if ($window(@nscsdraw)) window -c @nscsdraw
-  window -hp @nscsdraw 0 0 %w %h
+  window -hp @nscsdraw 0 0 $calc(%w + 16) $calc(%h + 39)
+  if ($window(@nscsdraw).dw > 100) %w = $window(@nscsdraw).dw
+  if ($window(@nscsdraw).dh > 60) %h = $window(@nscsdraw).dh
+  %bw = $calc(%w / 24)
   drawrect -rf @nscsdraw $rgb(17,18,30) 1 0 0 %w %h
   if (%s) {
     while (%h24 < 24) {

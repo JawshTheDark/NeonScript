@@ -54,6 +54,8 @@
 /neon secure [on/off]|Passwords and tokens: protect them with Windows DPAPI (neonsec.dll) or show the status
 #Look and feel
 /neon themes|Theme gallery: built-in themes plus imported MTS themes
+/neon templates|Event templates: how each kind of line looks (messages, joins, kicks ...) with the MTS <tokens>, preview and apply
+/neon themeedit [theme]|Theme editor: every colour with a live preview, saved as your own theme, exportable as an .mts
 /neon theme <id>|Apply a built-in theme (neonnight, synthwave, matrix, amber, midnight, slate, paper, classic)
 /neon mts import [file]|Import a classic .mts (mIRC Theme Standard) theme
 /neon mts apply <file.mts>|Activate an imported MTS theme (palette, fonts, event and chat templates)

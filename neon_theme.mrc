@@ -6,9 +6,11 @@
 
 alias ns.theme.file return $ns.data(themes.ini)
 alias ns.theme.ids return $replace($readini($ns.theme.file,n,themes,order),$chr(44),$chr(32))
-alias ns.theme.name return $readini($ns.theme.file,n,$1,name)
-alias ns.theme.desc return $readini($ns.theme.file,n,$1,desc)
-alias ns.theme.mode return $readini($ns.theme.file,n,$1,mode)
+; your own themes (the theme editor) live in themes_user.ini with ids u_<name>
+alias ns.theme.fileof return $iif($left($1,2) == u_,$+($scriptdir,themes_user.ini),$ns.theme.file)
+alias ns.theme.name return $readini($ns.theme.fileof($1),n,$1,name)
+alias ns.theme.desc return $readini($ns.theme.fileof($1),n,$1,desc)
+alias ns.theme.mode return $readini($ns.theme.fileof($1),n,$1,mode)
 alias ns.theme.current return $ns.get(theme,current,neonnight)
 ; names of mIRC's 31 colour items, in Colors-dialog order
 alias ns.theme.items return Background,Action text,Ctcp text,Highlight text,Info text,Info2 text,Invite text,Join text,Kick text,Mode text,Nick text,Normal text,Notice text,Notify text,Other text,Own text,Part text,Quit text,Topic text,Wallops text,Whois text,Editbox,Editbox text,Listbox,Listbox text,Gray text,Title text,Inactive,Treebar,Treebar Text,MDI area
@@ -42,8 +44,9 @@ alias ns.theme.apply {
     ns.mts.apply $mid($1,5)
     return
   }
-  var %id = $iif($1,$1,$ns.theme.current), %f = $ns.theme.file
+  var %id = $iif($1,$1,$ns.theme.current), %f
   if ($left(%id,4) == mts:) %id = $ns.get(theme,lastbuiltin,neonnight)
+  %f = $ns.theme.fileof(%id)
   var %cols = $readini(%f,n,%id,colors)
   if ($numtok(%cols,44) != 31) {
     ns.err unknown theme $qt(%id)
@@ -83,7 +86,7 @@ alias ns.theme.bgoff {
 ; Every built-in theme carries an "ev" palette (join, part, kick, per-rank colours ...)
 ; that NeonScript uses for its own event lines, independent of mIRC's colour scheme.
 alias ns.theme.storeev {
-  var %id = $1, %f = $ns.theme.file, %ev = $readini(%f,n,%id,ev), %i = 1, %kv
+  var %id = $1, %f = $ns.theme.fileof($1), %ev = $readini(%f,n,%id,ev), %i = 1, %kv
   while ($gettok(%ev,%i,44)) {
     %kv = $v1
     ns.set theme $+(ev_,$gettok(%kv,1,58)) $gettok(%kv,2,58)
@@ -116,7 +119,7 @@ alias ns.theme.init {
   if ($ns.get(theme,current) == $null) ns.set theme current neonnight
   ; make sure the accent keys exist even if the user never picked a theme
   if ($ns.get(theme,accent) == $null) {
-    var %id = $ns.theme.current, %f = $ns.theme.file
+    var %id = $ns.theme.current, %f = $ns.theme.fileof($ns.theme.current)
     ns.set theme accent $readini(%f,n,%id,accent)
     ns.set theme acc1 $readini(%f,n,%id,acc1)
     ns.set theme acc2 $readini(%f,n,%id,acc2)
@@ -137,7 +140,7 @@ alias neon.theme {
 ; ---------------------------------------------------------------- unified theme list
 ; entries: built-in ids first, then one "mts:<file.mts>" per imported MTS theme
 alias ns.theme.entries {
-  var %o = $ns.theme.ids, %i = 1
+  var %o = $ns.theme.ids $iif($isalias(ns.theme.uids),$ns.theme.uids), %i = 1
   if ($isalias(ns.mts.files)) {
     while ($gettok($ns.mts.files,%i,32)) {
       %o = %o $+(mts:,$v1)
@@ -173,7 +176,7 @@ menu @nstb_theme {
 ; ---------------------------------------------------------------- Theme Gallery dialog
 dialog ns_theme {
   title "NeonScript Themes"
-  size -1 -1 262 182
+  size -1 -1 262 198
   option dbu
   list 1, 6 6 82 122, size vsbar
   icon 2, 94 6 162 94, $mircexe, 0, noborder
@@ -186,6 +189,7 @@ dialog ns_theme {
   button "Preview", 11, 206 140 50 13
   button "Import MTS...", 12, 152 156 50 13
   button "Close", 13, 206 156 50 13, ok cancel
+  button "Theme editor...", 14, 152 174 104 13
 }
 on *:DIALOG:ns_theme:init:*:{
   tgfill
@@ -219,6 +223,7 @@ on *:DIALOG:ns_theme:sclick:11:{
   if ($ns.theme.ismts(%id)) ns.mts.preview $mid(%id,5)
 }
 on *:DIALOG:ns_theme:sclick:12:{ ns.later ns.mts.import }
+on *:DIALOG:ns_theme:sclick:14:{ ns.later neon themeedit }
 alias -l tgapply {
   var %id = $gettok($ns.theme.entries,$did(ns_theme,1).sel,32)
   if (%id) ns.theme.apply %id
@@ -236,6 +241,13 @@ alias -l tgshow {
     did -ra ns_theme 4 %d
     did -e ns_theme 11
     did -e ns_theme 6,7
+  }
+  elseif ($left(%id,2) == u_) {
+    did -g ns_theme 2 $ns.ted.thumb(%id)
+    did -ra ns_theme 3 $ns.theme.name(%id) $+ %act
+    did -ra ns_theme 4 $ns.theme.desc(%id)
+    did -b ns_theme 11
+    did -b ns_theme 6,7
   }
   else {
     did -g ns_theme 2 $ns.asset(theme_ $+ %id $+ .png)

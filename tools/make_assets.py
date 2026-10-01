@@ -639,7 +639,7 @@ HEADERS = {
     "link": ("LINK PREVIEW", 300, 30),
     "slog": ("STAFF LOG", 340, 30), "mass": ("MASS ACTIONS", 320, 30), "tpl": ("TOPIC TEMPLATES", 304, 30),
     "stats": ("CHANNEL STATS", 330, 30), "ignore": ("IGNORE MANAGER", 330, 30),
-    "bncdash": ("BOUNCER DASHBOARD", 330, 30), "rules": ("AUTOMATION RULES", 372, 30), "alias": ("ALIASES & POPUPS", 372, 30),
+    "bncdash": ("BOUNCER DASHBOARD", 330, 30), "tedit": ("THEME EDITOR", 410, 30), "evt": ("EVENT TEMPLATES", 392, 30), "rules": ("AUTOMATION RULES", 372, 30), "alias": ("ALIASES & POPUPS", 372, 30),
 }
 PX_PER_DBU = 4
 

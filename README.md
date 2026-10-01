@@ -73,6 +73,13 @@ Right-click any toolbar button for its own menu.
   NeonScript - Chime, Arcade and Soft (`assets\sounds\<pack>`, synthesised by `tools\make_assets.py`, no third-party audio).
   Per-event sounds you chose in the Sound manager still win.
 
+* **Theme editor** (`/neon themeedit`) - every mIRC colour item and every NeonScript event colour (48 in all) with a live
+  picture of what chat will look like and the full 99-colour palette; save it as your own theme (it joins the gallery),
+  apply it, or export it as a classic `.mts` file.
+* **Event templates** (`/neon templates`) - how each kind of line looks (channel message, action, notice, private message,
+  join, part, quit, kick, nick, mode, topic, invite) written with the MTS `<tokens>`; preview window, then apply. Saved as
+  `data\mts\my_templates.mts`, an ordinary MTS theme.
+
 ## Automation
 
 * **Rules** (`/neon rules`) - *when* something happens (a message, a mention, a private message, a join, part, quit, kick,
