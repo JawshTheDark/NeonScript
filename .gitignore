@@ -1,0 +1,37 @@
+# --- your own settings, logins and history: never published ---------------------------------------
+/neon.ini
+/profiles.ini
+/custom.ini
+/access.ini
+/chan.ini
+/backup/
+/data/mentions.dat
+/data/seen.dat
+/data/topics.txt
+/data/tmp/
+/data/*.log
+/data/msg_*.txt
+!/data/defaults/msg_*.txt
+/logs/
+
+# imported MTS themes belong to their authors; only the three written for NeonScript are tracked
+/data/mts/*
+!/data/mts/irssi_night.mts
+!/data/mts/bluebox_2003.mts
+!/data/mts/green_terminal.mts
+
+# --- build output ----------------------------------------------------------------------------------
+# release zips are built with tools/build_release.py (attach them to a GitHub release instead)
+/dist/
+/tools/dll/*.dll
+/tools/dll/*.obj
+/tools/dll/*.lib
+/tools/dll/*.exp
+__pycache__/
+*.pyc
+
+# editor / OS noise
+Thumbs.db
+desktop.ini
+*.bak
+*.tmp

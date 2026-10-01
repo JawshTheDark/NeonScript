@@ -1,0 +1,7 @@
+LIBRARY neonsec
+EXPORTS
+    LoadDll
+    UnloadDll
+    Version
+    Protect
+    Unprotect

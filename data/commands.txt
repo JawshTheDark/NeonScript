@@ -1,0 +1,77 @@
+#Getting started
+/neon|Open the Control Panel - every setting lives here
+/neonhelp, /neon help|This command reference
+/neon wizard|Run the first-time setup wizard again
+/neon about|Version, loaded modules and system info
+/neon reload|Reload every NeonScript module
+/neon reset|Reset every setting to its default
+/neon uninstall|Remove NeonScript and restore mIRC's own toolbar
+#Servers and bouncers
+/neon servers|Servers & Networks: profiles, logins (NickServ / SASL), perform lines, auto-join
+/neon bnc [profile]|Bouncer settings for a profile - Lurker, ZNC or soju (account, network, token, replay handling)
+/neon bnc add <name> <host> [port] <user> [network]|Quick Lurker profile over TLS, then paste your API token
+/neon bnc pin / forget|Trust, or forget, the TLS certificate of the bouncer you are connected to
+#Reading
+/neon mentions, /mentions|Mentions inbox: every highlight and private message from every network - double-click to jump
+/preview <url>, Shift + double-click a link|Preview a link: title, description, site, type, size and picture (only when you ask)
+#Maintenance
+/neon menus [on/off]|Replace mIRC's default right-click menus with NeonScript's categorised ones (off brings the originals back)
+/neon selftest|Check the install: scripts, data files, artwork, toolbar, commands, profiles
+/neon debug|Debug console - recent internal messages and a report you can paste into a bug report
+/neon export, /neon import [file]|Back up or restore your settings as a ZIP (never includes passwords or tokens)
+/neon backup|Backup & restore dialog: list, restore or delete backups
+/neon repair|Reload missing modules, re-create missing data files, rebuild the toolbar, then self-test
+/neon repair stock|Put mIRC's original colours, toolbar and stock aliases back (NeonScript stays installed)
+/neon update, /neon update url <https://...>|Check for a newer NeonScript (only when you run it; nothing is installed automatically)
+/neon secure [on/off]|Passwords and tokens: protect them with Windows DPAPI (neonsec.dll) or show the status
+#Look and feel
+/neon themes|Theme gallery: built-in themes plus imported MTS themes
+/neon theme <id>|Apply a built-in theme (neonnight, synthwave, matrix, amber, midnight, slate, paper, classic)
+/neon mts import [file]|Import a classic .mts (mIRC Theme Standard) theme
+/neon mts apply <file.mts>|Activate an imported MTS theme (palette, fonts, event and chat templates)
+/neon mts preview <file.mts>|Render a theme in a preview window without applying it
+/neon mts off|Leave MTS mode and restore your original colour palette
+/neon style <name>|Event style: modern, retro, minimal, mts or off (native mIRC)
+/neon symbols <set>|Glyph set: unicode, cp1252 or ascii
+/neon stamp <0-4>|Timestamps: 0 off, 1 [HH:nn], 2 [HH:nn:ss], 3 (HH:nn), 4 HH:nn
+/neon dash|Show or hide the live dashboard
+/neon splash|Replay the splash screen
+#Toolbar
+/neon toolbar|Customize the toolbar: tick, reorder, icon size
+/neon toolbar reset / on / off / rebuild|Reset to default, enable ours, restore mIRC's, redraw
+/neon button|Create a custom toolbar button (icon, command, right-click menu)
+/neon button add <icon> <command...>|Quick custom button, e.g. /neon button add wand /join #neon
+/neon button list / del <id>|List or remove custom buttons
+#Channels
+/channel [#chan], or /neon cc|Channel Control - replaces mIRC's Channel Central
+/neon kb [#chan] [nick]|Kick and ban dialog with ban types and rank checks
+/neon clones [#chan]|Clone scanner grouped by host, with every user's rank
+/k, /kb, /b, /ub, [#chan] <nick>|Rank-aware kick, kick+ban, ban and unban (random reasons)
+/op /deop /hp /dhp /voice /devoice /adm /deadm /own /disown <nicks>|Give or take @ % + & ~ - checks server support and your rank
+/j <chan>, /p [msg], /cycle|Join (adds the #), part with a random message, cycle
+#Userlist and protection
+/neon users|Userlist: auto owner (~), admin (&), op (@), halfop (%), voice (+), auto-kick, protected
+/aq /aa /ao /ah /av <nick> [#chan]|Add to the userlist with that auto-privilege
+/ak <nick> [#chan], /ua <nick>|Add an auto-kick, or remove userlist entries
+/neon words|Banned words list for word-kick protection
+/ign <nick>, /unign <nick>|Ignore for an hour, or stop ignoring
+#Away, sound and notifications
+/away [reason], /afk, /neon away|Go away (opens a dialog when no reason is given)
+/back, /neon back|Come back and see what you missed
+/neon awaylog|Read the mentions and PMs logged while away
+/neon sounds|Sound manager - map events to .wav files
+/neon mute|Toggle all NeonScript sounds
+/neon dnd|Toggle mIRC's Do Not Disturb
+#Tools
+/neon fx|Text effects: rainbow, fire, ocean, neon, wide, small caps ...
+/neon chars|Symbol map - arrows, shapes, box drawing, Braille ...
+/neon messages [quit/part/kick/slap/away]|Edit the random message lists
+/neon hotkeys|Bind commands to F-keys (also Shift and Ctrl)
+#Fun and lookups
+/8ball [question], /coin, /roll [NdM], /choose a or b or c|Games
+/slap <nick>, /calc <expression>, /uptime, /lag|Small utilities
+/weather [-s] <city>, /define <word>|Web lookups - contact public services only when you run them
+Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank <nick> (enable in Control Panel)
+#Services
+/ns /cs /ms /hs /bs /os <text>|Message NickServ, ChanServ, MemoServ, HostServ, BotServ, OperServ
+/identify <pw>, /ghost <nick> [pw], /recover <nick>|NickServ shortcuts
