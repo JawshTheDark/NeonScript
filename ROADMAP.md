@@ -89,7 +89,6 @@ Quote database, karma/seen/last-spoke, polls, small games (M each, S for karma),
 No DLL: the same hidden-PowerShell-helper pattern the media buttons use.
 | Item | Size | Notes |
 |---|---|---|
-| Phone push when mentioned while away | M `(web)` | ntfy.sh / Pushover / Discord-style webhook over HTTPS; topic or key stored encrypted; only while away or idle; message text optional (privacy switch). |
 | Windows toast notifications | M | Mentions and PMs as real toasts (click to jump), respects Do not disturb. |
 | Speak mentions (text-to-speech) | S | SAPI voice, per-channel opt-in. |
 | Speech to text (dictate into the editbox) | M `(exp)` | Windows speech recognition through the helper. |
