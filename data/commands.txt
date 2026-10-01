@@ -116,6 +116,8 @@ Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank 
 /ai do <request>|Plain-English moderation: shows the commands, asks, then queues them (kick, ban, quiet, mass, ignore, topic, mode only)
 /ai ask <question>|A plain question to the model (no chat is sent)
 /ai test, /ai key <key>|Check the connection; store an API key (protected, never in a backup)
+#Native helper (optional)
+/neon ui [on|off|status]|Nick list icons, avatars and the taskbar unread badge through neonui.dll (SHA-256 verified, off by default)
 #Services
 /ns /cs /ms /hs /bs /os <text>|Message NickServ, ChanServ, MemoServ, HostServ, BotServ, OperServ
 /identify <pw>, /ghost <nick> [pw], /recover <nick>|NickServ shortcuts

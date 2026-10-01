@@ -2,6 +2,13 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.13.0
+
+* **Native UI helper** (`neonui.dll`, source in `native/`, off by default - Control Panel > Native UI or `/neon ui on`): rank icons
+  and coloured-initial avatars in the nick list, an unread-mentions badge on the taskbar button. Verified by SHA-256 before it is
+  loaded; only touches mIRC's own windows. `/neon ui status` shows its state, the self-test checks it.
+* Two prompts with literal commas in `$input` (restore backup, restore original look) no longer lose their buttons.
+
 ## 2026.12.0
 
 * **AI helpers** (`/ai`, Control Panel > AI helpers, right-click menus): catch me up, unread-mentions summary, translate a line,

@@ -54,7 +54,7 @@ def collect():
     for name in sorted(os.listdir(PACK)):
         if name.lower().endswith(".mrc") and name.lower().startswith("neon"):
             files.append((os.path.join(PACK, name), name))
-    for name in TOP_FILES + ["neonsec.dll"]:
+    for name in TOP_FILES + ["neonsec.dll", "neonui.dll"]:
         p = os.path.join(PACK, name)
         if os.path.exists(p):
             files.append((p, name))
@@ -64,7 +64,7 @@ def collect():
                 full = os.path.join(dirpath, n)
                 files.append((full, os.path.relpath(full, PACK)))
     data = os.path.join(PACK, "data")
-    for n in ("themes.ini", "networks.ini", "commands.txt", "popups_none.ini", "media.ps1", "win.ps1", "neonsec.sha256"):
+    for n in ("themes.ini", "networks.ini", "commands.txt", "popups_none.ini", "media.ps1", "win.ps1", "neonsec.sha256", "neonui.sha256"):
         files.append((os.path.join(data, n), os.path.join("data", n)))
     for n in DEFAULT_LISTS:
         files.append((os.path.join(data, "defaults", "msg_%s.txt" % n), os.path.join("data", "msg_%s.txt" % n)))
@@ -76,17 +76,25 @@ def collect():
         p = os.path.join(PACK, "tools", n)
         if os.path.exists(p):
             files.append((p, os.path.join("tools", n)))
+    for n in ("neonui.cpp", "neonui.def", "build.cmd"):          # the native helper's source, so it can be audited and rebuilt
+        files.append((os.path.join(PACK, "native", n), os.path.join("native", n)))
+    for dirpath, _dirs, names in os.walk(os.path.join(data, "ui")):   # the HTML panels the helper shows (if any)
+        for n in sorted(names):
+            if n.lower().endswith((".html", ".css", ".js")):
+                full = os.path.join(dirpath, n)
+                files.append((full, os.path.relpath(full, PACK)))
     return files
 
 
 def main():
     ver = version()
-    dll = os.path.join(PACK, "neonsec.dll")
-    sumfile = os.path.join(PACK, "data", "neonsec.sha256")
-    if os.path.exists(dll):
-        want = open(sumfile).read().strip().lower()
-        if sha256(dll) != want:
-            sys.exit("neonsec.dll does not match data/neonsec.sha256 - rebuild it with tools\\dll\\build.cmd")
+    for dll_name, sum_name, how in (("neonsec.dll", "neonsec.sha256", "tools\\dll\\build.cmd"), ("neonui.dll", "neonui.sha256", "native\\build.cmd")):
+        dll = os.path.join(PACK, dll_name)
+        sumfile = os.path.join(PACK, "data", sum_name)
+        if os.path.exists(dll):
+            want = open(sumfile).read().strip().lower()
+            if sha256(dll) != want:
+                sys.exit("%s does not match data/%s - rebuild it with %s" % (dll_name, sum_name, how))
     files = collect()
     missing = [s for s, _ in files if not os.path.exists(s)]
     if missing:

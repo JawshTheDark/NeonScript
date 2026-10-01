@@ -7,9 +7,13 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
+  if (%i == 1401) return ui;on;0;c
+  if (%i == 1402) return ui;nlrank;1;c
+  if (%i == 1403) return ui;nlavatar;1;c
+  if (%i == 1404) return ui;badge;1;c
   if (%i == 1301) return ai;on;0;c
   if (%i == 1303) return ai;provider;ollama;s;ollama,openai,anthropic
   if (%i == 1305) return ai;model;_;e
@@ -297,6 +301,16 @@ dialog ns_opt {
   button "Get Ollama...", 1314, 166 184 60 12
   button "Command help", 1315, 230 184 60 12
 
+  ; ---- page 13 : Native UI helper  (ids 1400-1499)
+  box "Native UI helper (optional)", 1400, 82 38 266 172
+  check "Use the native helper neonui.dll (its SHA-256 is checked before it is loaded)", 1401, 92 50 254 9
+  check "Rank icons in the nick list (owner, admin, op, halfop, voice)", 1402, 108 66 234 9
+  check "Coloured initials (avatars) in the nick list", 1403, 108 79 234 9
+  check "Unread-mentions count on mIRC's taskbar button", 1404, 108 92 234 9
+  text "", 1405, 92 112 250 36
+  text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 152 250 27
+  button "Check helper", 1407, 92 184 70 12
+
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
   check "Write a debug log (neon.log)", 801, 92 52 250 9
@@ -309,7 +323,7 @@ dialog ns_opt {
   text "NeonScript keeps its settings in neon.ini inside its own folder, so the whole pack stays portable.", 816, 92 112 250 20
 }
 
-alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows ai
+alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows ai native
 
 on *:DIALOG:ns_opt:init:*:{
   did -g ns_opt 1 $ns.asset(header_options.png)
@@ -325,6 +339,7 @@ on *:DIALOG:ns_opt:init:*:{
   did -a ns_opt 2 Privacy & safety
   did -a ns_opt 2 Windows integration
   did -a ns_opt 2 AI helpers
+  did -a ns_opt 2 Native UI
   did -ra ns_opt 903 $ns.tag $+ $crlf $+ mIRC $version
   optload
   var %p = $findtok($pagekeys,%ns.optpage,1,32)
@@ -342,11 +357,12 @@ alias -l showpage {
     ns.didr -h ns_opt $+(%i,00) $+(%i,99)
     inc %i
   }
-  ns.didr -h ns_opt 1000 1399
+  ns.didr -h ns_opt 1000 1499
   if (%n == 9) ns.didr -v ns_opt 1000 1099
   elseif (%n == 10) ns.didr -v ns_opt 1100 1199
   elseif (%n == 11) ns.didr -v ns_opt 1200 1299
   elseif (%n == 12) ns.didr -v ns_opt 1300 1399
+  elseif (%n == 13) ns.didr -v ns_opt 1400 1499
   else ns.didr -v ns_opt $+(%n,00) $+(%n,99)
 }
 
@@ -387,6 +403,7 @@ alias -l optload {
   }
   did $iif($donotdisturb,-c,-u) ns_opt 405
   did -ra ns_opt 1309 $iif($ns.ai.haskey,$ns.ai.mask,$null)
+  did -ra ns_opt 1405 $ns.ui.statustext
 }
 alias -l optsave {
   var %n = $numtok($opt.ids,32), %i = 1, %id, %r, %sec, %it, %def, %t, %vals, %k, %line, %txt
@@ -451,6 +468,7 @@ on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
 on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
 on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
 on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
+on *:DIALOG:ns_opt:sclick:1407:{ optsave | did -ra ns_opt 1405 $ns.ui.statustext }
 on *:DIALOG:ns_opt:sclick:1313:{ optsave | ns.later ai test }
 on *:DIALOG:ns_opt:sclick:1314:{ run https://ollama.com/download }
 on *:DIALOG:ns_opt:sclick:1315:{ neonhelp ai }

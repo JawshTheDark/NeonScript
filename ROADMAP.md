@@ -109,7 +109,7 @@ Typing indicators, read markers (`draft/read-marker`), message edit and redactio
 Provider is your choice: a local model (Ollama on localhost) or an API key kept encrypted by `neonsec.dll`.
 Text leaves your PC only when you press the button, and the dialog says exactly what is being sent.
 
-### Phase 11 - Native UI layer  (the only phase that needs a purpose-built DLL; I write it, source in `native/`)
+### Phase 11 - Native UI layer  (STARTED in 2026.13.0: nick list icons + avatars + taskbar badge are done; HTML panels next)  (the only phase that needs a purpose-built DLL; I write it, source in `native/`)
 Avatars and rank icons in the nick list, rich message cards, an emoji picker and optional web-style panels
 (WebView2 ships with Windows 11). 32-bit like mIRC, hash-checked like `neonsec.dll`, off if missing.
 

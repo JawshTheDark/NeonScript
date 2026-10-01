@@ -53,3 +53,6 @@ desktop.ini
 /user_menu.mrc
 /themes_user.ini
 /aikey.ini
+/native/*.obj
+/native/*.lib
+/native/*.exp

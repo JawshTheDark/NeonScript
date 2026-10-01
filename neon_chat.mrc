@@ -136,6 +136,7 @@ alias ns.mi.unread {
 ; something changed: refresh the toolbar badge and the dialog, and save soon
 alias ns.mi.changed {
   if ($isalias(ns.tb.resync)) ns.tb.resync
+  if ($isalias(ns.ui.badge)) ns.ui.badge
   if ($dialog(ns_mi)) ns.mi.fill
   .timer.nsmisave -o 1 20 ns.mi.save
 }
