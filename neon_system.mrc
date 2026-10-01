@@ -307,8 +307,8 @@ alias neon.selftest {
 
   ns.st.head Data files
   %i = 1
-  while ($gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32) != $null) {
-    %lab = $gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32)
+  while ($gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 win.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32) != $null) {
+    %lab = $gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 win.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32)
     inc %i
     if ($exists($ns.data(%lab))) ns.st.line ok data\ $+ %lab
     else ns.st.line fail data\ $+ %lab is missing - run /neon repair
@@ -353,6 +353,11 @@ alias neon.selftest {
     elseif (!$exists($ns.md.ps)) ns.st.line warn media buttons: Windows PowerShell was not found - they cannot work
     elseif ($ns.md.alive) ns.st.line ok media helper is running: $ns.md.line
     else ns.st.line warn media helper is not running - /neon media restart
+  }
+  if ($isalias(ns.win.wanted)) {
+    if (!$ns.win.wanted) ns.st.line ok Windows helper: not needed (notifications and speech are off)
+    elseif ($ns.win.alive) ns.st.line ok Windows helper is running ( $+ $iif($ns.flag(toast,on,0),notifications) $+ $iif($ns.flag(speak,on,0),$chr(32) speech) $+ )
+    else ns.st.line warn Windows helper is not running - /neon toast test starts it
   }
 
   ns.st.head Commands

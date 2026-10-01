@@ -7,10 +7,20 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 412 413 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1102) return privacy;ctcp_mode;generic;s;normal,generic,silent
+  if (%i == 1201) return toast;on;0;c
+  if (%i == 1202) return toast;bg;1;c
+  if (%i == 1203) return toast;text;1;c
+  if (%i == 1205) return speak;on;0;c
+  if (%i == 1206) return speak;bg;1;c
+  if (%i == 1208) return speak;voice;_;e
+  if (%i == 1210) return speak;rate;0;e
+  if (%i == 1212) return paste;url;_;e
+  if (%i == 1214) return paste;field;file;e
+  if (%i == 1215) return paste;method;POST;s;POST,PUT
   if (%i == 1105) return privacy;ctcp_strangers;1;c
   if (%i == 1106) return privacy;ctcp_chan;0;c
   if (%i == 1108) return privacy;ctcp_rate;5;e
@@ -82,6 +92,7 @@ alias -l optnames {
   if ($1 == 302) return Unicode symbols;Windows (ANSI) symbols;ASCII only
   if ($1 == 308) return Off;[HH:nn];[HH:nn:ss];(HH:nn);HH:nn
   if ($1 == 506) return Ignore them;Kick them (if I am an op);Ignore and kick
+  if ($1 == 1215) return POST (form upload);PUT (raw upload)
   if ($1 == 1102) return Answer normally (mIRC's default);Hide them - TIME is answered in UTC;Never answer anything (except PING)
 }
 
@@ -229,6 +240,27 @@ dialog ns_opt {
   button "Staff log...", 1114, 172 188 56 13
   button "Channel stats...", 1115, 232 188 70 13
 
+  ; ---- page 11 : Windows integration  (ids 1200-1299)
+  box "Windows integration", 1200, 82 38 266 172
+  check "Windows notifications (toasts) for mentions and private messages", 1201, 92 50 250 9
+  check "only while mIRC is in the background", 1202, 108 62 230 9
+  check "show the message text in the notification", 1203, 108 74 230 9
+  text "Windows' own Do not disturb / Focus assist is respected, and so is NeonScript's. Switching this on adds the name NeonScript to Windows' notification settings; switching it off removes it again.", 1204, 92 87 250 27
+  check "Read mentions and private messages aloud", 1205, 92 116 250 9
+  check "only while mIRC is in the background", 1206, 108 128 230 9
+  text "Voice:", 1207, 108 142 24 9
+  edit "", 1208, 134 140 100 11
+  text "Speed (-10 to 10):", 1209, 240 142 60 9
+  edit "", 1210, 302 140 24 11, limit 3
+  text "Upload address for /paste (https://...):", 1211, 92 158 150 9
+  edit "", 1212, 92 168 250 11
+  text "Form field:", 1213, 92 184 36 9
+  edit "", 1214, 130 182 50 11
+  combo 1215, 186 182 90 50, drop
+  button "Test notification", 1216, 92 196 70 12
+  button "Test voice", 1217, 166 196 50 12
+  button "List voices", 1218, 220 196 50 12
+
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
   check "Write a debug log (neon.log)", 801, 92 52 250 9
@@ -241,7 +273,7 @@ dialog ns_opt {
   text "NeonScript keeps its settings in neon.ini inside its own folder, so the whole pack stays portable.", 816, 92 112 250 20
 }
 
-alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy
+alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows
 
 on *:DIALOG:ns_opt:init:*:{
   did -g ns_opt 1 $ns.asset(header_options.png)
@@ -255,6 +287,7 @@ on *:DIALOG:ns_opt:init:*:{
   did -a ns_opt 2 Advanced
   did -a ns_opt 2 Chat & reading
   did -a ns_opt 2 Privacy & safety
+  did -a ns_opt 2 Windows integration
   did -ra ns_opt 903 $ns.tag $+ $crlf $+ mIRC $version
   optload
   var %p = $findtok($pagekeys,%ns.optpage,1,32)
@@ -272,9 +305,10 @@ alias -l showpage {
     ns.didr -h ns_opt $+(%i,00) $+(%i,99)
     inc %i
   }
-  ns.didr -h ns_opt 1000 1199
+  ns.didr -h ns_opt 1000 1299
   if (%n == 9) ns.didr -v ns_opt 1000 1099
   elseif (%n == 10) ns.didr -v ns_opt 1100 1199
+  elseif (%n == 11) ns.didr -v ns_opt 1200 1299
   else ns.didr -v ns_opt $+(%n,00) $+(%n,99)
 }
 
@@ -369,6 +403,9 @@ on *:DIALOG:ns_opt:sclick:522:{ neon clones }
 on *:DIALOG:ns_opt:sclick:610:{ neon messages away }
 on *:DIALOG:ns_opt:sclick:1011:{ neon mentions }
 on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
+on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
+on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
+on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
 on *:DIALOG:ns_opt:sclick:1114:{ neon stafflog }
 on *:DIALOG:ns_opt:sclick:1115:{ neon stats }
 on *:DIALOG:ns_opt:sclick:611:{ neon awaylog }

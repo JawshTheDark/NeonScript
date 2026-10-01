@@ -172,6 +172,10 @@ class Client:
             self.send(line)
             time.sleep(delay)
 
+    def utf8(self):
+        """A private message with non-ASCII text, to check UTF-8 survives the round trip."""
+        self.send(":Zoë!z@host.example PRIVMSG " + self.nick + " :日本語 hello wörld — ok")
+
     def talk(self, chan):
         """Channel chatter from several nicks (stats counters, ignore tests)."""
         rows = [("Nova", "nova@host.example", "hello world this is a test"), ("Nova", "nova@host.example", "second line from nova"),
@@ -301,6 +305,8 @@ class Client:
                 threading.Thread(target=self.pm, daemon=True).start()
             if text.strip().lower() == "ctcp":
                 threading.Thread(target=self.ctcp, daemon=True).start()
+            if text.strip().lower() == "utf8":
+                threading.Thread(target=self.utf8, daemon=True).start()
             if text.strip().lower() == "talk":
                 threading.Thread(target=self.talk, args=(parts[1],), daemon=True).start()
         elif cmd == "AWAY":

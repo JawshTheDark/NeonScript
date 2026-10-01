@@ -64,7 +64,7 @@ def collect():
                 full = os.path.join(dirpath, n)
                 files.append((full, os.path.relpath(full, PACK)))
     data = os.path.join(PACK, "data")
-    for n in ("themes.ini", "networks.ini", "commands.txt", "popups_none.ini", "media.ps1", "neonsec.sha256"):
+    for n in ("themes.ini", "networks.ini", "commands.txt", "popups_none.ini", "media.ps1", "win.ps1", "neonsec.sha256"):
         files.append((os.path.join(data, n), os.path.join("data", n)))
     for n in DEFAULT_LISTS:
         files.append((os.path.join(data, "defaults", "msg_%s.txt" % n), os.path.join("data", "msg_%s.txt" % n)))

@@ -120,6 +120,7 @@ alias ns.mi.add {
   if (%n > 200) hdel ns.mi $calc(%n - 200)
   if (!%seen) && ($window($2)) window -g2 $2
   ns.mi.changed
+  if ($isalias(ns.win.notify)) ns.win.notify %n $1 $2 $3 %seen $5-
 }
 alias ns.mi.item return $hget(ns.mi,$1)
 alias ns.mi.unread {

@@ -32,6 +32,10 @@
 #Media
 /neon media [on|off|play|pause|next|prev|stop|status|restart]|Control whatever Windows is playing (Spotify, a browser tab, VLC ...) - the same as the toolbar buttons
 /np [text]|Say what you are listening to in the current channel or query (format: Control Panel > Sounds)
+#Windows
+/neon toast [on|off|test]|Windows notifications (toasts) for mentions and private messages while mIRC is in the background; click one to jump there
+/neon speak [on|off|test|voices|stop]|Read mentions and private messages aloud with the Windows voices
+/paste [file or text]|Upload a file, the clipboard text or the clipboard picture to the https:// address you set, and get the link in your editbox
 #Maintenance
 /neon menus [on/off]|Replace mIRC's default right-click menus with NeonScript's categorised ones (off brings the originals back)
 /neon selftest|Check the install: scripts, data files, artwork, toolbar, commands, profiles

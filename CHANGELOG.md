@@ -2,6 +2,13 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.5.0
+
+* **Windows toast notifications** for mentions and private messages (`/neon toast`), click-to-jump, background-only,
+  rate-limited, text optional; **speech** (`/neon speak`); **`/paste`** upload to an address you set. Control Panel >
+  Windows integration. A second small hidden PowerShell helper (`data\win.ps1`) does the Windows calls.
+* Text sent to the helpers is written as UTF-8 correctly (media titles and notifications with non-English text).
+
 ## 2026.4.0
 
 Channel tools, privacy, media buttons and a fix for Lurker's repeated buffer.

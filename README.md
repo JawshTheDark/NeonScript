@@ -65,6 +65,17 @@ Right-click any toolbar button for its own menu.
 * **Away / sound / DND**, **text effects**, **symbol map**, **F-key hotkeys**, **clone scanner**, **dashboard**,
   small games and a channel bot (`!roll !8ball !seen ...`).
 
+## Windows integration
+
+* **Toast notifications** (`/neon toast on`) - mentions and private messages as real Windows notifications while mIRC is
+  in the background; click one to jump to that conversation. Respects Windows' Focus assist and NeonScript's Do not
+  disturb; limited to one toast per conversation every 6 seconds. Off until you switch it on; switching it on adds the
+  name "NeonScript" to Windows' notification settings (HKCU only), switching it off removes it.
+* **Speech** (`/neon speak on`) - mentions and private messages read aloud with the Windows voices (`/neon speak voices`).
+* **`/paste`** - uploads a file, the clipboard text or the clipboard picture to an `https://` address *you* configure
+  (nothing is set by default, and it asks before sending) and puts the link in your editbox.
+* All of it runs through a small hidden PowerShell helper (`data\win.ps1`, plain text) that quits with mIRC.
+
 ## Chat and reading
 
 * **Mentions inbox** - `/neon mentions` or the @ button: every highlight and private message from all networks,
@@ -166,6 +177,7 @@ neon_web.mrc          link and image previews
 neon_theme.mrc  neon_mts.mrc  neon_toolbar.mrc  neon_events.mrc  neon_dialogs.mrc
 neon_servers.mrc  neon_bnc.mrc  neon_chan.mrc  neon_protect.mrc  neon_hud.mrc  neon_tools.mrc
 neon_away.mrc  neon_sound.mrc  neon_media.mrc  neon_fun.mrc  neon_alias.mrc
+neon_win.mrc          Windows toasts, speech, /paste
 neon_mod.mrc          staff log, quiet/mute, mass actions, topic templates
 neon_stats.mrc        channel stats
 neon_privacy.mrc      ignore manager, CTCP privacy

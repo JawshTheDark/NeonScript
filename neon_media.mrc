@@ -84,7 +84,7 @@ alias ns.md.load {
   var %sz = $file(%f).size
   if (!%sz) || (%sz > 6000) return
   bread $qt(%f) 0 %sz &ns.mdb
-  var %t = $utfdecode($bvar(&ns.mdb,1,%sz).text), %i = 1, %line, %p, %k, %v
+  var %t = $bvar(&ns.mdb,1,%sz).text, %i = 1, %line, %p, %k, %v
   if ($hget(ns.mdst)) hfree ns.mdst
   hmake ns.mdst 10
   while ($gettok(%t,%i,10) != $null) {
