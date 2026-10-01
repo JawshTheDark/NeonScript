@@ -77,6 +77,8 @@ alias ns.bnc.dupe {
   ; replayed line older than it was already read.  Several lines can share the mark's second, so the lines seen
   ; in that very second are remembered too (key + "!"): same second AND already seen = read, otherwise new.
   if (!$ns.flag(bnc,dedupe,1)) return 0
+  ; a /neon history request lets old lines through for a little while
+  if ($hget(ns.v3h,$+($cid,.,$1))) return 0
   var %t = $msgstamp, %k, %m, %id, %ids
   if (!%t) return 0
   %k = $+($ns.bnc.net,:,$lower($1))
@@ -138,8 +140,8 @@ alias ns.bnc.settle {
         inc %done
       }
     }
-    hdel ns.bncrp %k
-    hdel ns.bncreal %k
+    if ($hget(ns.bncrp)) hdel ns.bncrp %k
+    if ($hget(ns.bncreal)) hdel ns.bncreal %k
   }
   if (%done) ns.dbg bnc cleared the replay activity colour in %done window(s)
 }

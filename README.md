@@ -65,6 +65,17 @@ Right-click any toolbar button for its own menu.
 * **Away / sound / DND**, **text effects**, **symbol map**, **F-key hotkeys**, **clone scanner**, **dashboard**,
   small games and a channel bot (`!roll !8ball !seen ...`).
 
+## More IRCv3
+
+* **Read markers** (`draft/read-marker`): when you read a window NeonScript tells the server, and when another client reads
+  something the matching mentions in your inbox are marked read and the activity colour clears.
+* **Chat history** (`/neon history [n]`, `draft/chathistory`): load the latest messages from the server's own history.
+* **Deleted and edited messages** (`REDACT`, `+draft/edit`): shown as "deleted by ..." / "edited" lines.
+* **Typing indicators**: a nick lights up in the nick list while that person types.
+* **Accounts** (`/neon accounts`): who is logged in to services; the mass-action pattern `unauth` picks everyone not known to be.
+  mIRC already asks for server-time, message-tags, away-notify, account-notify, extended-join, multi-prefix and batch itself;
+  NeonScript asks for the three draft ones when the server offers them (`/neon ircextras` shows what is on).
+
 ## Fun and extras
 
 * **Channel extras** (part of the channel bot - switch it on in Control Panel > Channel commands): `!addquote` / `!quote [n | words]`

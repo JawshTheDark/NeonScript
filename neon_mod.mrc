@@ -478,6 +478,10 @@ alias ns.mass.match {
       if (!$ns.rk.of(%c,%nk)) return 1
       continue
     }
+    if (%p == unauth) {
+      if ($isalias(ns.v3.acct)) && ($ns.v3.acct(%nk) == $null) return 1
+      continue
+    }
     if ($left(%p,3) == re:) {
       if ($len(%p) < 80) && ($regex(ns.mp,%addr,$+(/,$mid(%p,4),/i))) return 1
       continue

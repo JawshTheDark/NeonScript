@@ -2,6 +2,12 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.11.0
+
+* **IRCv3 extras**: read markers, chat history on demand, deleted/edited message display, typing indicators in the nick list,
+  account tracking (`/neon accounts`, mass-action pattern `unauth`). The draft capabilities are requested after connect when the
+  server offers them. Control Panel > Chat & reading has the switch; `/neon ircextras` shows the state.
+
 ## 2026.10.0
 
 * **Channel extras**: quotes (`!addquote`, `!quote`, `!delquote`, `/neon quote`), karma (`nick++`, `!karma`, `!top`), polls with

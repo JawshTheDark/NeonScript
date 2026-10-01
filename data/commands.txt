@@ -40,6 +40,9 @@
 /neon aliases|Alias and popup-menu editor: your own commands and right-click / menubar items, saved as ordinary script files
 /weather [-s] <city>, /define [-s] <word>, /translate [-s] <code> <text>|Weather, dictionary and translation as cards (sent to wttr.in, dictionaryapi.dev, api.mymemory.translated.net only when you run them; -s says it in the channel)
 /neon quote [add <text> | find <words> | <n> | del <n> | list]|The channel's quote database (also !addquote !quote !delquote from the channel bot)
+/neon history [n] [#channel]|Load the latest n messages (default 50) from the server's stored history (draft/chathistory)
+/neon accounts [#channel]|Who is logged in to services, who is not known to be (account-notify)
+/neon ircextras [on|off]|IRCv3 extras (read markers, chat history, deleted/edited messages, typing indicators): what the server offers
 #Windows
 /neon toast [on|off|test]|Windows notifications (toasts) for mentions and private messages while mIRC is in the background; click one to jump there
 /neon speak [on|off|test|voices|stop]|Read mentions and private messages aloud with the Windows voices

@@ -47,6 +47,7 @@ alias ns.chat.line {
   if ($2 == $me) return
   if ($isalias(ns.bnc.isreplay)) && ($ns.bnc.isreplay) return
   if ($isalias(ns.bnc.real)) ns.bnc.real $1
+  if ($isalias(ns.v3.edit)) ns.v3.edit $1 $2
   ns.ur.touch $1
   ns.rp.context $1 $2 $3-
   ns.rp.remember $2 $3-
@@ -355,6 +356,12 @@ alias ns.rp.context {
 }
 ; reactions arrive as TAGMSG with +draft/react (and +draft/reply naming the message)
 raw TAGMSG:*:{
+  ; typing indicators (+typing=active|paused|done)
+  if ($msgtags(+typing)) && ($isalias(ns.v3.typing)) {
+    ns.v3.typing $1 $nick $msgtags(+typing).key
+    haltdef
+    return
+  }
   if (!$ns.flag(chat,replies,1)) return
   var %emoji = $msgtags(+draft/react).key, %target = $1, %w
   haltdef

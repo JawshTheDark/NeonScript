@@ -25,6 +25,7 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 6667
 LOG = sys.argv[2] if len(sys.argv) > 2 else "mock.log"
 SRV = "mock.neon"
 ARGS = sys.argv[3:]
+V3 = "v3" in ARGS             # IRCv3 extras: read-marker, chathistory, redaction, account-notify, extended-join
 MORE = "more" in ARGS          # Lurker overflow case
 QUIET = "quiet" in ARGS        # ircd with a real quiet list mode: CHANMODES=bq,...  (+q <mask>)
 EXTBAN = "extban" in ARGS      # ircd with extended bans: EXTBAN=~,q  (+b ~q:<mask>)
@@ -173,6 +174,25 @@ class Client:
             self.send(line)
             time.sleep(delay)
 
+    def v3test(self, chan):
+        """IRCv3 extras: typing, a message then its edit, a redaction, account changes."""
+        tagged = "message-tags" in self.caps
+        def t(tags):
+            return f"@{tags} " if tagged else ""
+        steps = [
+            (t("+typing=active") + f":Nova!nova@host.example TAGMSG {chan}", 1.5),
+            (t("msgid=e1") + f":Nova!nova@host.example PRIVMSG {chan} :this is the original text", 1.0),
+            (t("msgid=e2;+draft/edit=e1") + f":Nova!nova@host.example PRIVMSG {chan} :this is the corrected text", 1.0),
+            (t("msgid=d1") + f":Kira!kira@10.0.0.2 PRIVMSG {chan} :a message that will be deleted", 1.0),
+            (f":{SRV} REDACT {chan} d1 :spam", 1.0),
+            (":Nova!nova@host.example ACCOUNT novaacct", 0.6),
+            (":Kira!kira@10.0.0.2 ACCOUNT *", 0.6),
+            (t("+typing=done") + f":Nova!nova@host.example TAGMSG {chan}", 0.5),
+        ]
+        for line, delay in steps:
+            self.send(line)
+            time.sleep(delay)
+
     def xtest(self, chan):
         """Channel bot extras: quotes, karma, a poll with votes, games."""
         steps = [
@@ -264,8 +284,12 @@ class Client:
         if cmd == "CAP":
             sub = parts[1].upper() if len(parts) > 1 else ""
             if sub == "LS":
+                extra = " account-notify extended-join multi-prefix batch draft/read-marker draft/chathistory draft/message-redaction" if V3 else ""
+                if self.registered:
+                    self.send(f":{SRV} CAP {self.nick} LS :sasl=PLAIN server-time message-tags away-notify{extra}")
+                    return True
                 self.cap_open = True
-                self.send(f":{SRV} CAP * LS :sasl=PLAIN server-time znc.in/server-time-iso soju.im/bouncer-networks message-tags away-notify")
+                self.send(f":{SRV} CAP * LS :sasl=PLAIN server-time znc.in/server-time-iso soju.im/bouncer-networks message-tags away-notify{extra}")
             elif sub == "REQ":
                 req = " ".join(parts[2:]).lstrip(":")
                 self.caps.update(req.split())
@@ -320,6 +344,8 @@ class Client:
             self.send(f":{SRV} 332 {n} {chan} :Mock topic for {chan}")
             self.send(f":{SRV} 353 {n} = {chan} :@{n} ~Owner &Admin @Kira %Half +Zed Nova Clone1 Clone2")
             self.send(f":{SRV} 366 {n} {chan} :End of /NAMES list.")
+            if V3:
+                self.send(f":{SRV} MARKREAD {chan} timestamp=2026-09-30T08:00:00.000Z")
         elif cmd == "MODE" and len(parts) >= 2 and parts[1].startswith("#") and len(parts) == 2:
             n = self.nick
             self.send(f":{SRV} 324 {n} {parts[1]} +nt")
@@ -345,6 +371,17 @@ class Client:
                 self.send(f":{n}!{self.user}@127.0.0.1 KICK {parts[1]} {victim} :{reason}")
         elif cmd == "TOPIC" and len(parts) >= 3:
             self.send(f":{self.nick}!{self.user}@127.0.0.1 TOPIC {parts[1]} :{' '.join(parts[2:]).lstrip(':')}")
+        elif cmd == "MARKREAD" and len(parts) >= 2:
+            ts = parts[2] if len(parts) > 2 else "*"
+            self.send(f":{SRV} MARKREAD {parts[1]} {ts}")
+        elif cmd == "CHATHISTORY" and len(parts) >= 3:
+            chan = parts[2]
+            self.send(f":{SRV} BATCH +h1 chathistory {chan}")
+            for i, (nk, host, text, ts) in enumerate([("Nova", "nova@host.example", "(history) first old message", "2026-09-29T10:00:01.000Z"),
+                                                       ("Kira", "kira@10.0.0.2", "(history) second old message", "2026-09-29T10:00:02.000Z"),
+                                                       ("Nova", "nova@host.example", "(history) third old message", "2026-09-29T10:00:03.000Z")]):
+                self.send(f"@batch=h1;time={ts};msgid=hist{i} :{nk}!{host} PRIVMSG {chan} :{text}")
+            self.send(f":{SRV} BATCH -h1")
         elif cmd == "WHO" and len(parts) >= 2:
             n = self.nick
             ch = parts[1]
@@ -380,6 +417,8 @@ class Client:
                 threading.Thread(target=self.pm, daemon=True).start()
             if text.strip().lower() == "ctcp":
                 threading.Thread(target=self.ctcp, daemon=True).start()
+            if text.strip().lower() == "v3test":
+                threading.Thread(target=self.v3test, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "xtest":
                 threading.Thread(target=self.xtest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "rtest":

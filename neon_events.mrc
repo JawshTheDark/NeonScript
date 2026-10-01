@@ -409,6 +409,7 @@ raw 319:*:{
   halt
 }
 raw 330:*:{
+  if ($isalias(ns.v3.note330)) ns.v3.note330 $2 $3
   if (!$wi.ok) return
   if ($isalias(ns.mts.raw)) { ns.mts.raw 330 $2- | if ($result) halt }
   hadd -m ns.evv row $ns.ec(join) $+ $3 $+ $ns.o

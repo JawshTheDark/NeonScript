@@ -7,7 +7,7 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1102) return privacy;ctcp_mode;generic;s;normal,generic,silent
@@ -27,6 +27,7 @@ alias -l reg {
   if (%i == 1110) return privacy;ctcp_note;1;c
   if (%i == 1111) return staff;log;1;c
   if (%i == 1112) return stats;on;1;c
+  if (%i == 1012) return v3;on;1;c
   if (%i == 316) return toolbar;iconset;glossy;s;glossy,flat,outline,mono
   if (%i == 416) return sound;pack;windows;s;windows,chime,arcade,soft
   if (%i == 412) return media;watch;1;c
@@ -230,7 +231,8 @@ dialog ns_opt {
   check "Ask the server who is away when I join (channels under 150 users)", 1007, 108 145 234 9
   check "Show replies and reactions (IRCv3 - when the server supports them)", 1008, 92 158 250 9
   check "Shift + double-click a link to preview it", 1009, 92 171 250 9
-  button "Open the mentions inbox", 1011, 92 189 100 13
+  check "IRCv3 extras: read markers, chat history, typing, deleted messages", 1012, 92 181 250 9
+  button "Open the mentions inbox", 1011, 92 195 100 13
 
   ; ---- page 10 : Privacy & safety  (ids 1100-1199)
   box "Privacy && safety", 1100, 82 38 266 172
