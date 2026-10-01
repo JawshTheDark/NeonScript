@@ -89,6 +89,7 @@ alias ns.acc.apply {
   if (!$ns.ischan(%c)) || (!$nick(%c,%n)) || (%f == $null) return
   if ($pos(%f,k)) && ($ns.rk.cankick(%c)) && (!$pos(%f,p)) {
     ns.say auto-kick: $+($chr(2),%n,$chr(2)) is on your userlist in %c
+    ns.sl.tag %c userlist
     ban -k %c %n 2 You are not welcome here.
     return
   }
@@ -99,6 +100,7 @@ alias ns.acc.apply {
     inc %i
   }
   if (!%give) return
+  ns.sl.tag %c userlist
   var %nicks = %n, %k = 1
   while (%k < $len(%give)) {
     %nicks = %nicks %n
@@ -129,7 +131,8 @@ alias -l flcount {
   return $hget(ns.fl,$1)
 }
 alias ns.flood.hit {
-  var %c = $1, %n = $2, %act = $ns.get(protect,flood_action,ignore)
+  ; ns.flood.hit <chan> <nick> [action]   (the action defaults to the global one; a channel can have its own)
+  var %c = $1, %n = $2, %act = $iif($3,$3,$ns.get(protect,flood_action,ignore))
   if (%n == $me) return
   hdel ns.fl $+($cid,.,%c,.,%n)
   if (%act == ignore) || (%act == both) {
@@ -138,16 +141,25 @@ alias ns.flood.hit {
   }
   if (%act == kick) || (%act == both) {
     if ($ns.acc.safe(%n,%c)) { ns.say flood from %n in %c - not kicked (rank or protected). | return }
+    ns.sl.tag %c flood
     if ($ns.rk.cankick(%c)) kick %c %n Flooding - please slow down.
     else ns.say flood from %n in %c - I cannot kick here (need halfop or higher).
   }
 }
+; flood limits: the global ones (Control Panel > Protection), or this channel's own (Channel Control > Protection):
+;   flood_on = 0 use the global limit, 1 use this channel's own lines/seconds/action, 2 no flood protection here
 alias -l fltext {
-  if (!$ns.flag(protect,flood,0)) return
   if ($ns.bnc.q) return
   if ($1 == $me) return
-  var %lim = $ns.get(protect,flood_lines,6), %secs = $ns.get(protect,flood_secs,4)
-  if ($flcount($+($cid,.,$2,.,$1),%secs) >= %lim) ns.flood.hit $2 $1
+  var %own = $ns.ch.get($2,flood_on,0), %lim = $ns.get(protect,flood_lines,6), %secs = $ns.get(protect,flood_secs,4), %act
+  if (%own == 2) return
+  if (%own == 1) {
+    %lim = $ns.ch.get($2,flood_lines,%lim)
+    %secs = $ns.ch.get($2,flood_secs,%secs)
+    %act = $ns.ch.get($2,flood_action)
+  }
+  elseif (!$ns.flag(protect,flood,0)) return
+  if ($flcount($+($cid,.,$2,.,$1),%secs) >= %lim) ns.flood.hit $2 $1 %act
 }
 on *:TEXT:*:#:{
   if ($ns.bnc.q) return
@@ -160,7 +172,10 @@ on *:TEXT:*:#:{
       if (%w) && ($nick($chan,%w)) inc %hits
       inc %i
     }
-    if (%hits >= $ns.get(protect,masshl_n,6)) kick $chan $nick Mass highlighting.
+    if (%hits >= $ns.get(protect,masshl_n,6)) {
+      ns.sl.tag $chan protect
+      kick $chan $nick Mass highlighting.
+    }
   }
   ; banned words
   if ($ns.flag(protect,badwords,0)) && ($ns.rk.cankick($chan)) && (!$ns.acc.safe($nick,$chan)) {
@@ -168,6 +183,7 @@ on *:TEXT:*:#:{
     while (%k <= $lines(%f)) {
       %bw = $read(%f,n,%k)
       if (%bw) && ($+(*,%bw,*) iswm $1-) {
+        ns.sl.tag $chan protect
         kick $chan $nick Watch your language.
         break
       }
@@ -179,16 +195,18 @@ on *:ACTION:*:#:{ fltext $nick $chan }
 on *:NOTICE:*:#:{ fltext $nick $chan }
 
 ; ---------------------------------------------------------------- CTCP flood + PM spam
-on ^*:CTCP:*:*:{
+; (mIRC's CTCP events are "ctcp <level>:<text>:<*|#|?>:" lines - there is no "on CTCP")
+ctcp *:*:*:{
   if (!$ns.flag(protect,ctcpflood,1)) return
   if ($nick == $me) return
   if ($flcount($+($cid,.ctcp.,$nick),8) >= 5) {
     ignore -tu120 $address($nick,2)
     ns.say CTCP flood from $+($chr(2),$nick,$chr(2)) - ignored for 2 minutes.
-    haltdef
+    halt
   }
 }
 on ^*:TEXT:*:?:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$ns.flag(protect,pmspam,1)) return
   if ($query($nick)) return
   if ($ns.acc.get($ns.acc.firstid($nick),flags) != $null) return

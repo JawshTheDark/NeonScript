@@ -24,7 +24,10 @@ import time
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 6667
 LOG = sys.argv[2] if len(sys.argv) > 2 else "mock.log"
 SRV = "mock.neon"
-MORE = len(sys.argv) > 3 and sys.argv[3] == "more"
+ARGS = sys.argv[3:]
+MORE = "more" in ARGS          # Lurker overflow case
+QUIET = "quiet" in ARGS        # ircd with a real quiet list mode: CHANMODES=bq,...  (+q <mask>)
+EXTBAN = "extban" in ARGS      # ircd with extended bans: EXTBAN=~,q  (+b ~q:<mask>)
 NETS = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]
 
 
@@ -60,8 +63,10 @@ class Client:
         self.send(f":{SRV} 002 {n} :Your host is {SRV}, running mock-1.0")
         self.send(f":{SRV} 003 {n} :This server was created today")
         self.send(f":{SRV} 004 {n} {SRV} mock-1.0 iow ovmntk")
-        self.send(f":{SRV} 005 {n} CHANTYPES=# PREFIX=(qaohv)~&@%+ NETWORK=MockNet CHANMODES=b,k,l,imnpst "
-                  f"NICKLEN=30 CASEMAPPING=rfc1459 :are supported by this server")
+        cm = "bq,k,l,imnpst" if QUIET else "b,k,l,imnpst"
+        extra = " EXTBAN=~,qjn" if EXTBAN else ""
+        self.send(f":{SRV} 005 {n} CHANTYPES=# PREFIX=(qaohv)~&@%+ NETWORK=MockNet CHANMODES={cm} "
+                  f"MODES=4 TOPICLEN=120 NICKLEN=30 CASEMAPPING=rfc1459{extra} :are supported by this server")
         self.send(f":{SRV} 375 {n} :- {SRV} Message of the Day -")
         self.send(f":{SRV} 372 {n} :- Welcome to the NeonScript test network.")
         self.send(f":{SRV} 376 {n} :End of /MOTD command.")
@@ -100,7 +105,7 @@ class Client:
             (f":Ghost!ghost@gone.example JOIN {chan}", 0.25),
             (f":Ghost!ghost@gone.example QUIT :Ping timeout: 240 seconds", 0.25),
             (f":Nova!nova@host.example PRIVMSG {chan} :{me}: thanks for testing", 0.25),
-            (f":Nova!nova@host.example PRIVMSG {chan} :ACTION raises a glass", 0.25),
+            (f":Nova!nova@host.example PRIVMSG {chan} :\x01ACTION raises a glass\x01", 0.25),
             (f":Admin!adm@admin.example NOTICE {chan} :maintenance at midnight", 0.25),
             (f":Nova!nova@host.example PRIVMSG {chan} :!roll 2d6", 0.3),
             (f":Kira!kira@10.0.0.2 PRIVMSG {chan} :!ops", 0.3),
@@ -135,9 +140,9 @@ class Client:
         def t(tags):
             return f"@{tags} " if tagged else ""
         steps = [
-            (t("msgid=m1") + f":Nova!nova@host.example PRIVMSG {chan} :the build is green again", 0.4),
-            (t("msgid=m2;+draft/reply=m1") + f":Kira!kira@10.0.0.2 PRIVMSG {chan} :nice, which commit fixed it?", 0.4),
-            (t("+draft/react=\U0001F44D;+draft/reply=m1") + f":Owner!own@owner.example TAGMSG {chan}", 0.4),
+            (t("msgid=m1") + f":Nova!nova@host.example PRIVMSG {chan} :the build is green again", 1.1),
+            (t("msgid=m2;+draft/reply=m1") + f":Kira!kira@10.0.0.2 PRIVMSG {chan} :nice, which commit fixed it?", 1.1),
+            (t("+draft/react=\U0001F44D;+draft/reply=m1") + f":Owner!own@owner.example TAGMSG {chan}", 1.1),
             (":Admin!adm@admin.example AWAY :gone fishing", 0.6),
         ]
         for line, delay in steps:
@@ -151,6 +156,34 @@ class Client:
         self.send(f":Nova!nova@host.example PRIVMSG {me} :hey {me}, got a minute?")
         time.sleep(0.4)
         self.send(f":Kira!kira@10.0.0.2 PRIVMSG #neon :{me}: your build is ready")
+
+    def ctcp(self):
+        """CTCP requests from a channel member (Nova) and from a stranger."""
+        me = self.nick
+        steps = [
+            (f":Nova!nova@host.example PRIVMSG {me} :\x01VERSION\x01", 1.1),
+            (f":Nova!nova@host.example PRIVMSG {me} :\x01TIME\x01", 1.1),
+            (f":Nova!nova@host.example PRIVMSG {me} :\x01FINGER\x01", 1.1),
+            (f":Stranger!str@far.example PRIVMSG {me} :\x01VERSION\x01", 1.1),
+            (f":Stranger!str@far.example PRIVMSG {me} :\x01USERINFO\x01", 1.1),
+            (f":Nova!nova@host.example PRIVMSG {me} :\x01PING 12345\x01", 1.1),
+        ]
+        for line, delay in steps:
+            self.send(line)
+            time.sleep(delay)
+
+    def talk(self, chan):
+        """Channel chatter from several nicks (stats counters, ignore tests)."""
+        rows = [("Nova", "nova@host.example", "hello world this is a test"), ("Nova", "nova@host.example", "second line from nova"),
+                ("Kira", "kira@10.0.0.2", "kira here"), ("Spammer", "sp@spam.example", "buy cheap stuff now"),
+                ("Nova", "nova@host.example", "third nova line"), ("Spammer", "sp@spam.example", "visit my site"),
+                ("Owner", "own@owner.example", "behave")]
+        for nk, host, text in rows:
+            self.send(f":{nk}!{host} PRIVMSG {chan} :{text}")
+            time.sleep(0.2)
+        self.send(f":Spammer!sp@spam.example NOTICE {self.nick} :private spam notice")
+        self.send(f":Spammer!sp@spam.example PRIVMSG {self.nick} :private spam message")
+        self.send(f":Spammer!sp@spam.example INVITE {self.nick} #spamchan")
 
     def whois(self, target):
         n = self.nick
@@ -229,7 +262,7 @@ class Client:
             self.send(f":{SRV} 367 {n} {parts[1]} *!*@spam.example Owner 1790000100")
             self.send(f":{SRV} 368 {n} {parts[1]} :End of channel ban list")
         elif cmd == "MODE" and len(parts) >= 3 and parts[1].startswith("#") and parts[2][:1] in "+-" \
-                and not parts[2].lstrip("+-") in ("b", "e", "I", "q"):
+                and (len(parts) >= 4 or not parts[2].lstrip("+-") in ("b", "e", "I", "q")):
             # channel mode change from the client: echo it back like a real server, except +S which
             # we refuse (482) so the client's error handling can be tested
             n = self.nick
@@ -237,6 +270,13 @@ class Client:
                 self.send(f":{SRV} 482 {n} {parts[1]} :You're not channel operator")
             else:
                 self.send(f":{n}!{self.user}@127.0.0.1 MODE {parts[1]} {' '.join(parts[2:])}")
+        elif cmd == "KICK" and len(parts) >= 3:
+            n = self.nick
+            reason = " ".join(parts[3:]).lstrip(":") or n
+            for victim in parts[2].split(","):
+                self.send(f":{n}!{self.user}@127.0.0.1 KICK {parts[1]} {victim} :{reason}")
+        elif cmd == "TOPIC" and len(parts) >= 3:
+            self.send(f":{self.nick}!{self.user}@127.0.0.1 TOPIC {parts[1]} :{' '.join(parts[2:]).lstrip(':')}")
         elif cmd == "WHO" and len(parts) >= 2:
             n = self.nick
             ch = parts[1]
@@ -259,6 +299,10 @@ class Client:
                 threading.Thread(target=self.tags, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "pm":
                 threading.Thread(target=self.pm, daemon=True).start()
+            if text.strip().lower() == "ctcp":
+                threading.Thread(target=self.ctcp, daemon=True).start()
+            if text.strip().lower() == "talk":
+                threading.Thread(target=self.talk, args=(parts[1],), daemon=True).start()
         elif cmd == "AWAY":
             if len(parts) > 1:
                 self.send(f":{SRV} 306 {self.nick} :You have been marked as being away")

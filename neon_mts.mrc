@@ -335,27 +335,32 @@ alias -l mts.chatshow {
   return 1
 }
 on ^*:TEXT:*:#:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$mts.chaton) return
   mts.chatvars $1-
   if ($mts.chatshow(textchan,$chan)) haltdef
 }
 on ^*:ACTION:*:#:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$mts.chaton) return
   mts.chatvars $1-
   if ($mts.chatshow(actionchan,$chan)) haltdef
 }
 on ^*:NOTICE:*:#:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$mts.chaton) return
   mts.chatvars $1-
   if ($mts.chatshow(noticechan,$chan)) haltdef
 }
 on ^*:TEXT:*:?:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$mts.chaton) return
   if (!$query($nick)) return
   mts.chatvars $1-
   if ($mts.chatshow(textquery,$nick)) haltdef
 }
 on ^*:ACTION:*:?:{
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($1-))) return
   if (!$mts.chaton) return
   if (!$query($nick)) return
   mts.chatvars $1-

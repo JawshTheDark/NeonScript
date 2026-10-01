@@ -35,3 +35,13 @@ Thumbs.db
 desktop.ini
 *.bak
 *.tmp
+
+# more personal data: moderation history, ignores, quiets, templates, counters, read marks
+/stafflog.txt
+/data/stafflog.txt
+/data/stafflog.txt.new
+/mutes.ini
+/ignores.ini
+/topic_tpl.ini
+/data/stats.dat
+/data/bncmarks.dat

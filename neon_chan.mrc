@@ -132,7 +132,8 @@ dialog ns_cc {
   edit "", 21, 14 80 312 11, autohs tab 10
   button "Set topic", 22, 14 95 46 12, tab 10
   button "Clear", 23, 64 95 34 12, tab 10
-  combo 24, 102 95 224 90, drop tab 10
+  combo 24, 102 95 168 90, drop tab 10
+  button "Templates...", 27, 274 95 52 12, tab 10
   text "", 25, 14 111 312 9, tab 10
   box "Channel modes", 26, 14 122 312 82, tab 10
   check "n  no outside messages", 30, 22 134 96 9, tab 10
@@ -200,12 +201,20 @@ dialog ns_cc {
   check "send the greeting as a notice  (placeholders: <nick> <chan>)", 97, 100 126 226 9, tab 13
   check "Give everyone voice (+v) when they join", 98, 14 142 230 9, tab 13
   check "Rejoin automatically if I am kicked from here", 99, 14 156 230 9, tab 13
-  button "Save", 100, 14 176 46 12, tab 13
-  text "", 101, 64 178 262 9, tab 13
+  check "Own flood limit here:", 102, 14 170 74 9, tab 13
+  edit "", 103, 90 168 18 11, autohs limit 3 tab 13
+  text "lines in", 104, 111 170 28 9, tab 13
+  edit "", 105, 140 168 18 11, autohs limit 3 tab 13
+  text "sec", 106, 161 170 14 9, tab 13
+  combo 107, 178 168 148 60, drop tab 13
+  button "Save", 100, 14 190 46 12, tab 13
+  text "", 101, 64 192 262 9, tab 13
 
   ; ---- Info
   edit "", 110, 14 68 312 120, read multi vsbar tab 14
   button "Refresh", 111, 14 190 46 12, tab 14
+  button "Channel stats...", 112, 64 190 70 12, tab 14
+  button "Staff log...", 113, 138 190 60 12, tab 14
 
   text "", 6, 6 215 276 9
   button "Close", 120, 286 212 48 13, ok cancel
@@ -747,6 +756,16 @@ alias -l fillprot {
   did $iif($ns.ch.get(%c,greet_notice,0) == 1,-c,-u) ns_cc 97
   did $iif($ns.ch.get(%c,autovoice,0) == 1,-c,-u) ns_cc 98
   did $iif($ns.ch.get(%c,rejoin,0) == 1,-c,-u) ns_cc 99
+  var %fo = $ns.ch.get(%c,flood_on,0), %fa = $ns.ch.get(%c,flood_action,ignore)
+  did -r ns_cc 107
+  did -a ns_cc 107 Ignore them
+  did -a ns_cc 107 Kick them (if I am an op)
+  did -a ns_cc 107 Ignore and kick
+  did -a ns_cc 107 No flood protection in this channel
+  did -c ns_cc 107 $iif(%fo == 2,4,$iif(%fa == kick,2,$iif(%fa == both,3,1)))
+  did $iif(%fo > 0,-c,-u) ns_cc 102
+  did -ra ns_cc 103 $ns.ch.get(%c,flood_lines,$ns.get(protect,flood_lines,6))
+  did -ra ns_cc 105 $ns.ch.get(%c,flood_secs,$ns.get(protect,flood_secs,4))
   did -ra ns_cc 101 $chr(160)
 }
 on *:DIALOG:ns_cc:sclick:94:{
@@ -765,6 +784,11 @@ on *:DIALOG:ns_cc:sclick:100:{
   ns.ch.set %c greet_notice $did(ns_cc,97).state
   ns.ch.set %c autovoice $did(ns_cc,98).state
   ns.ch.set %c rejoin $did(ns_cc,99).state
+  var %fs = $did(ns_cc,107).sel
+  ns.ch.set %c flood_on $iif($did(ns_cc,102).state,$iif(%fs == 4,2,1),0)
+  ns.ch.set %c flood_lines $iif($did(ns_cc,103).text isnum,$did(ns_cc,103).text,6)
+  ns.ch.set %c flood_secs $iif($did(ns_cc,105).text isnum,$did(ns_cc,105).text,4)
+  ns.ch.set %c flood_action $gettok(ignore kick both ignore,%fs,32)
   did -ra ns_cc 101 Saved for %c $+ .
   ns.ch.enforce %c
 }
@@ -789,6 +813,13 @@ alias -l fillinfo {
   ns.ml.add Mode lock: $iif($ns.ch.get(%c,modelock_on,0) == 1,$ns.ch.get(%c,modelock),off) $+ $chr(44) topic protect: $iif($ns.ch.get(%c,topicprotect,0) == 1,on,off)
   ns.ml.set ns_cc 110
 }
+on *:DIALOG:ns_cc:sclick:27:{
+  set -u60 %ns.tpl.chan $cur
+  ns.tpl.seed
+  ns.dlg ns_tpl ns_tpl
+}
+on *:DIALOG:ns_cc:sclick:112:{ neon stats $cur }
+on *:DIALOG:ns_cc:sclick:113:{ neon stafflog }
 on *:DIALOG:ns_cc:sclick:111:{
   if ($status == connected) mode $cur
   .timer.nsccr -o 1 2 ns.cc.refresh
@@ -821,6 +852,7 @@ alias ns.ch.voice {
   if (!$ns.ischan(%c)) || (!$nick(%c,%n)) return
   if (!$pos($ns.rk.modes,v)) || (!$ns.rk.cangive(%c,v)) return
   if ($ns.rk.of(%c,%n)) return
+  ns.sl.tag %c autovoice
   mode %c +v %n
 }
 ; mode lock + topic protect for one channel
@@ -839,13 +871,19 @@ alias ns.ch.enforce {
       }
       inc %i
     }
-    if (%add) || (%rem) mode %c $iif(%add,+ $+ %add) $+ $iif(%rem,- $+ %rem)
+    if (%add) || (%rem) {
+      ns.sl.tag %c lock
+      mode %c $iif(%add,+ $+ %add) $+ $iif(%rem,- $+ %rem)
+    }
   }
   ; --- topic protect
   if ($ns.ch.get(%c,topicprotect,0) == 1) {
     var %saved = $ns.ch.get(%c,topicsaved)
     if (%saved != $null) && ($chan(%c).topic != %saved) {
-      if ($ns.rk.atleast(%c,$me,o)) || (!$ns.ch.hasmode($chan(%c).mode,t)) topic %c %saved
+      if ($ns.rk.atleast(%c,$me,o)) || (!$ns.ch.hasmode($chan(%c).mode,t)) {
+        ns.sl.tag %c lock
+        topic %c %saved
+      }
     }
   }
 }

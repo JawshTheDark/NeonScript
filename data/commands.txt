@@ -10,7 +10,22 @@
 /neon servers|Servers & Networks: profiles, logins (NickServ / SASL), perform lines, auto-join
 /neon bnc [profile]|Bouncer settings for a profile - Lurker, ZNC or soju (account, network, token, replay handling)
 /neon bnc add <name> <host> [port] <user> [network]|Quick Lurker profile over TLS, then paste your API token
+/neon bnc marks [reset]|Which replayed messages count as already read (Lurker re-sends its whole buffer each connect); reset shows them all once more
 /neon bnc pin / forget|Trust, or forget, the TLS certificate of the bouncer you are connected to
+#Channel tools
+/neon mass|Mass actions: voice, devoice, kick, ban, kick+ban or quiet everyone matching a pattern - preview first, ranked and protected people are never touched
+/neon mass <action> <pattern...> [-r reason] [-t 10m] [-n] [-a] [-y]|The same from the command line (a preview unless -y). Patterns: Clone*, *!*@host, clones, norank, re:<regex>
+/neon mass stop|Cancel what a mass action has not sent yet
+/neon quiet <nick|mask> [10m|2h|1d] [reason]|Stop someone talking - a +q or an extended-ban quiet, whichever the server has. Lifts itself after the time
+/neon unquiet <nick|mask>, /neon quiets|Lift a quiet, or list the quiets NeonScript set
+/neon stafflog|Staff log: every kick, ban, quiet, mode and topic change you made, and what caused it (by hand, userlist, flood, mass ...)
+/neon stats [#channel]|Channel stats: lines per person and messages by hour of the day
+/neon topictpl [name]|Topic templates: save topics with {chan} {date} {time} {me} {users} {old} placeholders, or set one in this channel
+#Privacy
+/neon ignores|Ignore manager: who, what kind of message, for how long, where, with a note - mIRC's own ignore list does the work
+/neon ignore <nick|mask> [10m|2h|1d] [note]|Ignore someone (everything, all networks), optionally for a while
+/neon unignore <nick|mask>|Stop ignoring them
+/neon privacy|Privacy settings: CTCP replies (VERSION, TIME, FINGER ...), staff log and stats switches
 #Reading
 /neon mentions, /mentions|Mentions inbox: every highlight and private message from every network - double-click to jump
 /preview <url>, Shift + double-click a link|Preview a link: title, description, site, type, size and picture (only when you ask)

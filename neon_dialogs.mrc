@@ -7,9 +7,16 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 412 413 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 412 413 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
+  if (%i == 1102) return privacy;ctcp_mode;generic;s;normal,generic,silent
+  if (%i == 1105) return privacy;ctcp_strangers;1;c
+  if (%i == 1106) return privacy;ctcp_chan;0;c
+  if (%i == 1108) return privacy;ctcp_rate;5;e
+  if (%i == 1110) return privacy;ctcp_note;1;c
+  if (%i == 1111) return staff;log;1;c
+  if (%i == 1112) return stats;on;1;c
   if (%i == 412) return media;watch;1;c
   if (%i == 413) return media;format;is listening to <artist> - <title>;e
   if (%i == 1001) return chat;mentions;1;c
@@ -75,6 +82,7 @@ alias -l optnames {
   if ($1 == 302) return Unicode symbols;Windows (ANSI) symbols;ASCII only
   if ($1 == 308) return Off;[HH:nn];[HH:nn:ss];(HH:nn);HH:nn
   if ($1 == 506) return Ignore them;Kick them (if I am an op);Ignore and kick
+  if ($1 == 1102) return Answer normally (mIRC's default);Hide them - TIME is answered in UTC;Never answer anything (except PING)
 }
 
 ; ---------------------------------------------------------------- Control Panel dialog
@@ -204,6 +212,23 @@ dialog ns_opt {
   check "Shift + double-click a link to preview it", 1009, 92 171 250 9
   button "Open the mentions inbox", 1011, 92 189 100 13
 
+  ; ---- page 10 : Privacy & safety  (ids 1100-1199)
+  box "Privacy && safety", 1100, 82 38 266 172
+  text "CTCP requests (VERSION, TIME, FINGER ...) - how should I answer?", 1101, 92 52 250 9
+  combo 1102, 92 62 180 60, drop
+  text "mIRC always answers VERSION itself - a script cannot stop that. Everything else follows these rules:", 1103, 92 78 250 18
+  check "Only answer people who share a channel with me or have a chat open", 1105, 92 98 250 9
+  check "Never answer a CTCP that was sent to a whole channel", 1106, 92 111 250 9
+  text "Answer at most", 1107, 92 126 50 9
+  edit "", 1108, 144 124 20 11, limit 2
+  text "requests a minute", 1109, 168 126 100 9
+  check "Tell me in the status window when a request is hidden", 1110, 92 139 250 9
+  check "Keep a staff log of the kicks, bans, modes and topics I set", 1111, 92 155 250 9
+  check "Count lines per person in channels (Channel stats)", 1112, 92 168 250 9
+  button "Ignore manager...", 1113, 92 188 76 13
+  button "Staff log...", 1114, 172 188 56 13
+  button "Channel stats...", 1115, 232 188 70 13
+
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
   check "Write a debug log (neon.log)", 801, 92 52 250 9
@@ -216,7 +241,7 @@ dialog ns_opt {
   text "NeonScript keeps its settings in neon.ini inside its own folder, so the whole pack stays portable.", 816, 92 112 250 20
 }
 
-alias -l pagekeys return general connection display sounds protection away commands advanced chat
+alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy
 
 on *:DIALOG:ns_opt:init:*:{
   did -g ns_opt 1 $ns.asset(header_options.png)
@@ -229,6 +254,7 @@ on *:DIALOG:ns_opt:init:*:{
   did -a ns_opt 2 Channel commands
   did -a ns_opt 2 Advanced
   did -a ns_opt 2 Chat & reading
+  did -a ns_opt 2 Privacy & safety
   did -ra ns_opt 903 $ns.tag $+ $crlf $+ mIRC $version
   optload
   var %p = $findtok($pagekeys,%ns.optpage,1,32)
@@ -246,8 +272,9 @@ alias -l showpage {
     ns.didr -h ns_opt $+(%i,00) $+(%i,99)
     inc %i
   }
-  ns.didr -h ns_opt 1000 1099
+  ns.didr -h ns_opt 1000 1199
   if (%n == 9) ns.didr -v ns_opt 1000 1099
+  elseif (%n == 10) ns.didr -v ns_opt 1100 1199
   else ns.didr -v ns_opt $+(%n,00) $+(%n,99)
 }
 
@@ -341,6 +368,9 @@ on *:DIALOG:ns_opt:sclick:521:{ neon words }
 on *:DIALOG:ns_opt:sclick:522:{ neon clones }
 on *:DIALOG:ns_opt:sclick:610:{ neon messages away }
 on *:DIALOG:ns_opt:sclick:1011:{ neon mentions }
+on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
+on *:DIALOG:ns_opt:sclick:1114:{ neon stafflog }
+on *:DIALOG:ns_opt:sclick:1115:{ neon stats }
 on *:DIALOG:ns_opt:sclick:611:{ neon awaylog }
 on *:DIALOG:ns_opt:sclick:710:{ neon messages }
 on *:DIALOG:ns_opt:sclick:810:{ run explorer $qt($scriptdir) }

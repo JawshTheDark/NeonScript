@@ -2,7 +2,28 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
-## Unreleased
+## 2026.4.0
+
+Channel tools, privacy, media buttons and a fix for Lurker's repeated buffer.
+
+* **Lurker (and any bouncer that re-sends its buffer) no longer lights everything up on every connect.** The newest
+  message seen in each window is remembered (saved between sessions, `data\bncmarks.dat`); replayed lines that are not
+  newer are dropped before anything shows them, and the activity colour that genuinely new replayed lines leave in the
+  tree / switchbar is cleared once the replay settles - unless something live arrived in that window meanwhile. Two
+  switches in the Bouncer dialog, `/neon bnc marks [reset]`.
+* **Mass actions** (`/neon mass`): voice, devoice, kick, ban, kick + ban, quiet by pattern with a preview; throttled queue.
+* **Quiet / mute** (`/neon quiet`, `unquiet`, `quiets`): `+q` or `+b ~q:` as the server supports; timed quiets lift themselves.
+* **Staff log** (`/neon stafflog`): kicks, bans, quiets, modes and topics you set, with the source (manual, userlist,
+  flood, lock, mass, mute ...). Menus and Control Panel entries for it.
+* **Channel stats** (`/neon stats`): per-person lines/words and a messages-by-hour chart. Switch off in Privacy & safety.
+* **Topic templates** (`/neon topictpl`, Channel Control > General > Templates...).
+* **Per-channel flood limits** (Channel Control > Protection).
+* **Ignore manager** (`/neon ignores`, `/neon ignore`, `/neon unignore`): kinds, expiry, scope, note; drives mIRC's own
+  ignore list (so ignored people are really invisible) and re-applies it after a restart. The nick-list Ignore items use it.
+* **CTCP privacy** and a new Control Panel page **Privacy & safety**. Fixed: the CTCP flood guard never fired - mIRC's
+  CTCP events are `ctcp ...:` lines, there is no `on CTCP`.
+* **Media controls** on the toolbar (see below), `/np`.
+* Self-test checks every artwork file (it silently skipped most before), the media helper and all new modules.
 
 * **Media controls** on the toolbar: previous, play / pause and next buttons that control whatever Windows is
   playing (the same System Media Transport Controls the keyboard media keys use), the play button turns into a

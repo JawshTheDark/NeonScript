@@ -597,6 +597,8 @@ HEADERS = {
     "debug": ("DEBUG CONSOLE", 330, 30), "backup": ("BACKUP & RESTORE", 300, 30),
     "mentions": ("MENTIONS", 330, 30),
     "link": ("LINK PREVIEW", 300, 30),
+    "slog": ("STAFF LOG", 340, 30), "mass": ("MASS ACTIONS", 320, 30), "tpl": ("TOPIC TEMPLATES", 304, 30),
+    "stats": ("CHANNEL STATS", 330, 30), "ignore": ("IGNORE MANAGER", 330, 30),
 }
 PX_PER_DBU = 4
 

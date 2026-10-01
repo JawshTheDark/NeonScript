@@ -89,16 +89,15 @@ alias ign {
     ns.err usage: /ign <nick>
     return
   }
-  ignore -u3600 $ns.mask($1)
-  ns.say ignoring $+($ns.b,$1,$ns.b) for an hour.
+  ns.ig.add $ns.mask($1) pcnti all 3600 quick ignore (menu)
+  ns.say ignoring $+($ns.b,$1,$ns.b) for an hour. /neon ignores manages the list.
 }
 alias unign {
   if (!$1) {
     ns.err usage: /unign <nick>
     return
   }
-  ignore -r $ns.mask($1)
-  ns.say no longer ignoring $+($ns.b,$1,$ns.b) $+ .
+  neon unignore $1
 }
 ; services shortcuts
 alias ns msg NickServ $$1-
@@ -387,6 +386,8 @@ alias ns.mn.priv {
   if (!$pos($ns.rk.modes,%l)) || (!$ns.rk.cangive(%c,%l)) return $null
   return $+($iif($ns.rk.has(%c,%n,%l),Take,Give),$chr(32),$ns.rk.lname(%l),$chr(32),$chr(40),$ns.rk.char(%l),$chr(41))
 }
+; label only when the server has a quiet mode and I may use it
+alias ns.mn.q return $iif($ns.mute.kind != none && $ns.rk.cankick($iif($chan,$chan,$active)),$1-)
 alias ns.mn.sign return $iif($ns.rk.has($iif($chan,$chan,$active),$2,$1),-,+)
 ; "Auto-op (@)" - shown when the server has that rank
 alias ns.mn.auto {
@@ -402,6 +403,11 @@ menu nicklist {
   .Kick && ban...:neon kb $chan $$1
   .Kick (random reason):k $chan $$1
   .Ban:b $chan $$1
+  .$ns.mn.q(Quiet for 10 minutes):neon quiet $$1 10m
+  .$ns.mn.q(Quiet until I lift it):neon quiet $$1
+  .$ns.mn.q(Lift the quiet):neon unquiet $$1
+  .-
+  .Mass actions...:neon mass
   .-
   .Rank
   ..$ns.mn.priv(q,$1):ns.priv $ns.mn.sign(q,$1) q $$1
@@ -428,7 +434,9 @@ menu nicklist {
   .Send file...:dcc send $$1
   Ignore
   .For an hour:ign $$1
+  .Until I stop it:neon ignore $$1
   .Stop ignoring:unign $$1
+  .Ignore manager...:neon ignores
 }
 menu channel {
   Moderation
@@ -436,7 +444,13 @@ menu channel {
   .Clone scanner:neon clones $chan
   .Userlist...:neon users
   .Who has what?:echo -cat info $ns.pfx $ns.bot.ops($chan)
+  .Mass actions...:neon mass
+  .Quiets I have set:neon quiets
+  .Staff log...:neon stafflog
+  .Channel stats...:neon stats $chan
   Tools
+  .Topic templates...:neon topictpl
+  .Ignore manager...:neon ignores
   .Dashboard:neon dash
   .Text effects...:neon fx
   .Symbol map...:neon chars
@@ -448,7 +462,9 @@ menu query {
   .Add as protected:ns.acc.add $ns.mask($$1) p * protected added $date
   Ignore
   .For an hour:ign $$1
+  .Until I stop it:neon ignore $$1
   .Stop ignoring:unign $$1
+  .Ignore manager...:neon ignores
   Tools
   .Text effects...:neon fx
 }
@@ -461,6 +477,11 @@ menu status {
   .Themes...:neon themes
   .Dashboard:neon dash
   .Control panel...:neon
+  Privacy
+  .Ignore manager...:neon ignores
+  .Staff log...:neon stafflog
+  .Channel stats...:neon stats
+  .CTCP privacy...:neon privacy
   Maintenance
   .Self-test:neon selftest
   .Debug console:neon debug

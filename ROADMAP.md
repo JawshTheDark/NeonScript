@@ -46,7 +46,7 @@ release packaging (`tools/build_release.py`, `tools/install.ps1`), MIT licence, 
 | Link previews | M `(web)` | `/preview url` and click-to-preview card: title, type, size. Fetch only on request. |
 | Image/GIF preview window | M `(web)` | PNG/JPG/static GIF work natively; **animated GIFs would need a DLL** - I would show the first frame. |
 
-### Phase 3 - Channel tools and safety
+### Phase 3 - Channel tools and safety  (DONE 2026-10-01, version 2026.4.0)
 | Item | Size | Notes |
 |---|---|---|
 | Mass actions (kick/ban/voice by pattern, with preview) | M | Builds on the existing rank checks. |

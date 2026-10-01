@@ -14,11 +14,28 @@
 alias ns.ur.seen return $iif($appactive && $active == $1 && $activecid == $cid,1,0)
 
 ; ---------------------------------------------------------------- message events (one dispatcher per event)
-on ^*:TEXT:*:#:{ ns.chat.line $chan $nick $1- }
-on ^*:ACTION:*:#:{ ns.chat.line $chan $nick $1- }
-on ^*:NOTICE:*:#:{ ns.chat.line $chan $nick $1- }
-on ^*:TEXT:*:?:{ ns.chat.line $nick $nick $1- }
-on ^*:ACTION:*:?:{ ns.chat.line $nick $nick $1- }
+; (a bouncer such as Lurker re-sends its whole buffer on every connect: lines already read on an earlier connect
+;  are dropped here, before anything else sees them - see ns.bnc.dupe in neon_bnc.mrc)
+on ^*:TEXT:*:#:{
+  if ($isalias(ns.bnc.dupe)) && ($ns.bnc.dupe($chan,$nick,$md5($1-))) halt
+  ns.chat.line $chan $nick $1-
+}
+on ^*:ACTION:*:#:{
+  if ($isalias(ns.bnc.dupe)) && ($ns.bnc.dupe($chan,$nick,$md5($1-))) halt
+  ns.chat.line $chan $nick $1-
+}
+on ^*:NOTICE:*:#:{
+  if ($isalias(ns.bnc.dupe)) && ($ns.bnc.dupe($chan,$nick,$md5($1-))) halt
+  ns.chat.line $chan $nick $1-
+}
+on ^*:TEXT:*:?:{
+  if ($isalias(ns.bnc.dupe)) && ($ns.bnc.dupe($nick,$nick,$md5($1-))) halt
+  ns.chat.line $nick $nick $1-
+}
+on ^*:ACTION:*:?:{
+  if ($isalias(ns.bnc.dupe)) && ($ns.bnc.dupe($nick,$nick,$md5($1-))) halt
+  ns.chat.line $nick $nick $1-
+}
 ; in the other direction: a later non-^ pass for the mentions inbox (the line is already on screen)
 on *:TEXT:*:#:{ ns.mi.msg c $chan $nick $1- }
 on *:ACTION:*:#:{ ns.mi.msg a $chan $nick $1- }
@@ -29,6 +46,7 @@ on *:ACTION:*:?:{ ns.mi.msg q $nick $nick $1- }
 alias ns.chat.line {
   if ($2 == $me) return
   if ($isalias(ns.bnc.isreplay)) && ($ns.bnc.isreplay) return
+  if ($isalias(ns.bnc.real)) ns.bnc.real $1
   ns.ur.touch $1
   ns.rp.context $1 $2 $3-
   ns.rp.remember $2 $3-

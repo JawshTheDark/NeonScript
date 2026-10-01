@@ -62,6 +62,96 @@ alias ns.bnc.isreplay {
   if (!%t) return 0
   return $iif($calc($ctime - %t) > $ns.get(bnc,replaysecs,20),1,0)
 }
+; ---------------------------------------------------------------- Lurker re-sends its buffer on every connect
+; Lurker (unlike ZNC/soju) does not mark history as delivered, so each time mIRC attaches the same backlog
+; comes back - already read, but lighting up every window red again.  Two things deal with that:
+;   1. a "newest message I have seen" time is kept for every window (marks, saved in data\bncmarks.dat);
+;      a replayed line that is not newer than the mark is dropped before it is shown
+;   2. whatever activity colour the genuinely new part of a replay leaves behind in the tree / switchbar is
+;      cleared once the replay has settled, unless something live arrived in that window meanwhile
+alias ns.bnc.net return $iif($network,$network,$iif($server,$server,local))
+alias ns.bnc.markfile return $ns.data(bncmarks.dat)
+; 1 = this line is a replay of something already seen on an earlier connect (drop it)
+alias ns.bnc.dupe {
+  ; $1 = window  $2 = nick  $3 = md5 of the text.  The mark is the newest server time seen in that window; a
+  ; replayed line older than it was already read.  Several lines can share the mark's second, so the lines seen
+  ; in that very second are remembered too (key + "!"): same second AND already seen = read, otherwise new.
+  if (!$ns.flag(bnc,dedupe,1)) return 0
+  var %t = $msgstamp, %k, %m, %id, %ids
+  if (!%t) return 0
+  %k = $+($ns.bnc.net,:,$lower($1))
+  %m = $hget(ns.bncmark,%k)
+  %id = $+($2,.,$left($3,8))
+  %ids = $hget(ns.bncmark,$+(%k,!))
+  if ($ns.bnc.isreplay) && (%m != $null) && ((%t < %m) || ((%t == %m) && ($istok(%ids,%id,32)))) {
+    set -u2 %ns.bnc.skip $+($cid,.,%t,.,$2,.,$3)
+    hinc -m ns.bncdup $cid
+    ns.bnc.rp $1
+    .timer.nsbncdn $+ $cid 1 $calc($ns.get(bnc,clearwait,6) + 1) scid $cid ns.bnc.dupnote
+    return 1
+  }
+  if (%m == $null) || (%t > %m) {
+    hadd -m ns.bncmark %k %t
+    hadd -m ns.bncmark $+(%k,!) %id
+  }
+  elseif (%t == %m) {
+    %ids = $ns.trim(%ids %id)
+    if ($numtok(%ids,32) > 30) %ids = $gettok(%ids,$+($calc($numtok(%ids,32) - 29),-),32)
+    hadd -m ns.bncmark $+(%k,!) %ids
+  }
+  return 0
+}
+; later handlers (MTS chat lines, the replay marker ...) ask this for the line being processed: nick + text length
+alias ns.bnc.skipping return $iif(%ns.bnc.skip == $+($cid,.,$msgstamp,.,$1,.,$2),1,0)
+alias ns.bnc.dupnote {
+  var %n = $hget(ns.bncdup,$cid)
+  if (!%n) return
+  hdel ns.bncdup $cid
+  ns.dbg bnc hid %n already-read replayed message(s)
+  if ($ns.flag(bnc,dupenote,1)) echo -cst info $+($ns.pfx,$chr(32),$ns.ec(dim),hid,$chr(32),%n,$chr(32),replayed message(s) you already read on an earlier connect,$ns.o)
+}
+; a replayed line that was shown: note the window so its leftover activity colour can be cleared
+alias ns.bnc.rp {
+  if (!$ns.flag(bnc,clearact,1)) return
+  var %k = $+($cid,.,$1)
+  if (!$hget(ns.bncrp,%k)) hadd -m ns.bncrp %k $ctime
+  .timer.nsbnccl $+ $cid 1 $ns.get(bnc,clearwait,6) scid $cid ns.bnc.settle
+}
+; something live (not a replay) arrived in this window
+alias ns.bnc.real hadd -m ns.bncreal $+($cid,.,$1) $ctime
+alias ns.bnc.settle {
+  var %p = $+($cid,.), %n = $hget(ns.bncrp,0).item, %i = 1, %keys, %k, %w, %done = 0, %real
+  while (%i <= %n) {
+    %k = $hget(ns.bncrp,%i).item
+    inc %i
+    if ($left(%k,$len(%p)) == %p) %keys = %keys %k
+  }
+  %i = 1
+  while ($gettok(%keys,%i,32) != $null) {
+    %k = $v1
+    inc %i
+    %w = $mid(%k,$calc($len(%p) + 1))
+    if ($window(%w)) {
+      %real = $hget(ns.bncreal,%k)
+      if (!%real) || (%real < $hget(ns.bncrp,%k)) {
+        window -g0 %w
+        inc %done
+      }
+    }
+    hdel ns.bncrp %k
+    hdel ns.bncreal %k
+  }
+  if (%done) ns.dbg bnc cleared the replay activity colour in %done window(s)
+}
+on *:SIGNAL:ns.boot:{
+  if ($exists($ns.bnc.markfile)) && (!$hget(ns.bncmark)) hload -m ns.bncmark $qt($ns.bnc.markfile)
+  .timer.nsbncsv 0 300 ns.bnc.savemarks
+}
+on *:SIGNAL:ns.exit:{ ns.bnc.savemarks }
+alias ns.bnc.savemarks {
+  if ($hget(ns.bncmark)) hsave -o ns.bncmark $qt($ns.bnc.markfile)
+}
+
 ; "stay quiet" version used by protections, sounds, bots ...
 alias ns.bnc.q {
   if (!$ns.flag(bnc,quiet,1)) return 0
@@ -100,16 +190,22 @@ on *:CONNECT:{
 ; ---------------------------------------------------------------- replayed history: dimmed, original time
 alias -l plain return $iif($ns.get(events,style,modern) == mts,0,1)
 on ^*:TEXT:*:#:{
+  if ($ns.bnc.skipping($nick,$md5($1-))) return
+  if ($ns.bnc.isreplay) ns.bnc.rp $chan
   if (!$ns.flag(bnc,replaymark,1)) || (!$ns.bnc.isreplay) || (!$plain) return
   echo -c $+ mt $+ $msgstamp $+ i2 gray $chan $+($ns.ec(dim),$chr(8635),$chr(32),$chr(60),$ns.rk.of($chan,$nick),$nick,$chr(62),$chr(32),$1-,$ns.o)
   haltdef
 }
 on ^*:ACTION:*:#:{
+  if ($ns.bnc.skipping($nick,$md5($1-))) return
+  if ($ns.bnc.isreplay) ns.bnc.rp $chan
   if (!$ns.flag(bnc,replaymark,1)) || (!$ns.bnc.isreplay) || (!$plain) return
   echo -c $+ mt $+ $msgstamp $+ i2 gray $chan $+($ns.ec(dim),$chr(8635),$chr(32),$chr(42),$chr(32),$nick,$chr(32),$1-,$ns.o)
   haltdef
 }
 on ^*:TEXT:*:?:{
+  if ($ns.bnc.skipping($nick,$md5($1-))) return
+  if ($ns.bnc.isreplay) ns.bnc.rp $nick
   if (!$ns.flag(bnc,replaymark,1)) || (!$ns.bnc.isreplay) || (!$plain) return
   if (!$query($nick)) return
   echo -c $+ mt $+ $msgstamp $+ i2 gray $nick $+($ns.ec(dim),$chr(8635),$chr(32),$chr(60),$nick,$chr(62),$chr(32),$1-,$ns.o)
@@ -281,8 +377,21 @@ alias -l ns.bnc.addgo {
 ; /neon bnc pin                 trust the certificate of the current connection
 ; /neon bnc forget              forget the pinned certificate of the current bouncer
 ; /neon bnc discover [profile]  ask the bouncer for your networks and add a profile for each
+; forget which messages were already read (the next replay shows everything once more)
+alias ns.bnc.marksreset {
+  if ($hget(ns.bncmark)) hfree ns.bncmark
+  if ($exists($ns.bnc.markfile)) .remove $qt($ns.bnc.markfile)
+}
 alias neon.bnc {
   var %c = $lower($1)
+  if (%c == marks) {
+    if ($2 == reset) {
+      ns.bnc.marksreset
+      ns.say forgot which replayed messages you had read - the next replay shows them all once more.
+    }
+    else ns.say $hget(ns.bncmark,0).item window(s) have a read mark. /neon bnc marks reset forgets them.
+    return
+  }
   if (%c == discover) {
     var %p = $2
     if (!$ns.srv.exists(%p)) %p = $ns.bnc.cur
@@ -357,7 +466,7 @@ alias neon.bnc {
 ; ---------------------------------------------------------------- dialog
 dialog ns_bnc {
   title "Bouncer"
-  size -1 -1 264 226
+  size -1 -1 264 268
   option dbu
   icon 1, 0 0 264 30, $mircexe, 0, noborder
   check "This profile connects through a bouncer", 2, 6 36 252 9
@@ -378,10 +487,13 @@ dialog ns_bnc {
   check "Mark replayed history (dimmed, with its original time)", 15, 6 166 252 9
   check "Stay quiet during replay: no sounds, away log, protections or bot replies", 16, 6 178 252 9
   check "Offer to add a profile per network when the bouncer lists them", 23, 6 190 252 9
-  button "Forget pin", 21, 6 208 44 12
-  button "Discover networks...", 22, 54 208 76 12
-  button "OK", 17, 154 208 50 13, ok default
-  button "Cancel", 18, 208 208 50 13, cancel
+  check "Hide replayed messages I already read on an earlier connect (Lurker re-sends its whole buffer)", 24, 6 202 252 9
+  check "Clear the red activity colours a replay leaves in the window tree", 25, 6 214 252 9
+  button "Forget pin", 21, 6 230 44 12
+  button "Discover networks...", 22, 54 230 76 12
+  button "Forget what I have read", 26, 134 230 80 12
+  button "OK", 17, 154 248 50 13, ok default
+  button "Cancel", 18, 208 248 50 13, cancel
 }
 alias -l hint {
   var %t = $1
@@ -413,6 +525,8 @@ on *:DIALOG:ns_bnc:init:*:{
   if ($ns.flag(bnc,replaymark,1)) did -c ns_bnc 15
   if ($ns.flag(bnc,quiet,1)) did -c ns_bnc 16
   if ($ns.flag(bnc,autodiscover,1)) did -c ns_bnc 23
+  if ($ns.flag(bnc,dedupe,1)) did -c ns_bnc 24
+  if ($ns.flag(bnc,clearact,1)) did -c ns_bnc 25
   did -ra ns_bnc 19 $hint($gettok(lurker znc soju other,$did(ns_bnc,4).sel,32))
 }
 on *:DIALOG:ns_bnc:sclick:4:{ did -ra ns_bnc 19 $hint($gettok(lurker znc soju other,$did(ns_bnc,4).sel,32)) }
@@ -421,6 +535,10 @@ on *:DIALOG:ns_bnc:sclick:21:{
   did -ra ns_bnc 14 Forgotten - it will be pinned again on the next TLS connection.
 }
 on *:DIALOG:ns_bnc:sclick:17:{ ns.bnc.dlgsave }
+on *:DIALOG:ns_bnc:sclick:26:{
+  ns.bnc.marksreset
+  did -ra ns_bnc 14 Forgotten - every replayed message shows once more on the next connect.
+}
 on *:DIALOG:ns_bnc:sclick:22:{
   var %id = %ns.bnc.id
   if (!%id) return
@@ -452,4 +570,6 @@ alias -l ns.bnc.dlgsave {
   ns.set bnc replaymark $did(ns_bnc,15).state
   ns.set bnc quiet $did(ns_bnc,16).state
   ns.set bnc autodiscover $did(ns_bnc,23).state
+  ns.set bnc dedupe $did(ns_bnc,24).state
+  ns.set bnc clearact $did(ns_bnc,25).state
 }
