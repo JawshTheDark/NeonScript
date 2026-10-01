@@ -172,6 +172,26 @@ class Client:
             self.send(line)
             time.sleep(delay)
 
+    def rtest(self, chan):
+        """Events for the automation-rule tests: replies, a bad word, a join, a nick with a pipe, a mention, a PM, a kick."""
+        me = self.nick
+        steps = [
+            (f":Spammer!sp@spam.example JOIN {chan}", 0.3),
+            (f":Ev|il!ev@evil.example JOIN {chan}", 0.3),
+            (f":Nova!nova@host.example PRIVMSG {chan} :thanks bot, you rock", 0.5),
+            (f":Spammer!sp@spam.example PRIVMSG {chan} :badword here", 0.5),
+            (f":Newbie!nb@new.example JOIN {chan}", 0.5),
+            (f":Ev|il!ev@evil.example PRIVMSG {chan} :thanks bot", 0.5),
+            (f":Nova!nova@host.example PRIVMSG {chan} :thanks bot again", 0.5),
+            (f":Kira!kira@10.0.0.2 PRIVMSG {chan} :{me}: ping", 0.5),
+            (f":Nova!nova@host.example PRIVMSG {me} :are you there?", 0.5),
+            (f":Owner!own@owner.example PRIVMSG {chan} :badword from an op", 0.5),
+            (f":Owner!own@owner.example KICK {chan} Clone1 :bye", 0.5),
+        ]
+        for line, delay in steps:
+            self.send(line)
+            time.sleep(delay)
+
     def utf8(self):
         """A private message with non-ASCII text, to check UTF-8 survives the round trip."""
         self.send(":Zoë!z@host.example PRIVMSG " + self.nick + " :日本語 hello wörld — ok")
@@ -305,6 +325,8 @@ class Client:
                 threading.Thread(target=self.pm, daemon=True).start()
             if text.strip().lower() == "ctcp":
                 threading.Thread(target=self.ctcp, daemon=True).start()
+            if text.strip().lower() == "rtest":
+                threading.Thread(target=self.rtest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "utf8":
                 threading.Thread(target=self.utf8, daemon=True).start()
             if text.strip().lower() == "talk":

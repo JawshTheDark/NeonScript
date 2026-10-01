@@ -32,6 +32,9 @@
 #Media
 /neon media [on|off|play|pause|next|prev|stop|status|restart]|Control whatever Windows is playing (Spotify, a browser tab, VLC ...) - the same as the toolbar buttons
 /np [text]|Say what you are listening to in the current channel or query (format: Control Panel > Sounds)
+#Automation
+/neon rules|Automation rules: when something happens (a message, a join, a kick, a connect ...) do something - auto-replies, greetings, alerts, moderation
+/neon rule on <name>, /neon rule off <name>, /neon rule log, /neon rule resume|Switch a rule on or off, show what fired recently, or resume after the safety breaker paused the rules
 #Windows
 /neon toast [on|off|test]|Windows notifications (toasts) for mentions and private messages while mIRC is in the background; click one to jump there
 /neon speak [on|off|test|voices|stop]|Read mentions and private messages aloud with the Windows voices
