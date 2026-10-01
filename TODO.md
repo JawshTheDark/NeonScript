@@ -30,7 +30,14 @@ Mentions inbox, new-messages line, nick-list colours + away dimming, replies/rea
 categorised right-click menus (mIRC's stock ones replaced). Tested against the mock servers; right-click menus
 were loaded and their label logic checked but **not yet seen drawn** (my test harness cannot open mIRC's popups).
 
+## Phases 3-10 (2026.4.0 - 2026.12.0) - done, tested on the mock servers only
+Moderation tools, Windows integration, automation rules, bouncer dashboard, icon sets and sound packs, theme editor, channel
+extras and web cards, IRCv3 extras, opt-in AI helpers. See CHANGELOG.md. None of it has met a real network yet: please try
+`/neon selftest`, a Lurker connect, `/neon ircextras`, and (if you want it) `/ai test` against your own Ollama or API key.
+
 ## Still open
+* AI helpers were tested against a stand-in service only - the first real Ollama / OpenAI / Anthropic call may need a tweak
+  (model name, address). `/ai test` is the quickest check; `/neon debug` shows what failed.
 * If Channel Control still misbehaves on a real network, note the network, the channel and your
   rank: the result bar should now say why (refused / reverted / not an op).
 * Setup Wizard changes the alternate nickname but `$mnick` (mIRC's main nick) stays unchanged.
