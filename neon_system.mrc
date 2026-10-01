@@ -6,7 +6,7 @@
 ;  (or switch the automatic check on).
 ; ============================================================================
 
-alias ns.schema return 2
+alias ns.schema return 3
 alias ns.bakdir return $+($scriptdir,backup\)
 alias ns.stock.file return $+($ns.bakdir,stock.ini)
 alias ns.stock.alfile return $+($ns.bakdir,aliases.stock.ini)
@@ -62,6 +62,14 @@ alias ns.mig.2 {
   if (%o == $null) || ($istok(%o,mentions,32)) return
   if ($istok(%o,notify,32)) ns.set toolbar order $instok(%o,mentions,$calc($findtok(%o,notify,1,32) + 1),32)
   else ns.set toolbar order %o mentions
+}
+
+; layout 3 = media buttons (previous / play-pause / next): add them after Mentions when the order was customised
+alias ns.mig.3 {
+  var %o = $ns.get(toolbar,order)
+  if (%o == $null) || ($istok(%o,mplay,32)) return
+  if ($istok(%o,mentions,32)) ns.set toolbar order $instok($instok($instok($instok(%o,-,$calc($findtok(%o,mentions,1,32) + 1),32),mprev,$calc($findtok(%o,mentions,1,32) + 2),32),mplay,$calc($findtok(%o,mentions,1,32) + 3),32),mnext,$calc($findtok(%o,mentions,1,32) + 4),32)
+  else ns.set toolbar order %o - mprev mplay mnext
 }
 
 ; ---------------------------------------------------------------- stock mIRC snapshot
@@ -299,8 +307,8 @@ alias neon.selftest {
 
   ns.st.head Data files
   %i = 1
-  while ($gettok(themes.ini networks.ini commands.txt popups_none.ini msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32) != $null) {
-    %lab = $gettok(themes.ini networks.ini commands.txt popups_none.ini msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32)
+  while ($gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32) != $null) {
+    %lab = $gettok(themes.ini networks.ini commands.txt popups_none.ini media.ps1 msg_quit.txt msg_part.txt msg_kick.txt msg_slap.txt msg_away.txt,%i,32)
     inc %i
     if ($exists($ns.data(%lab))) ns.st.line ok data\ $+ %lab
     else ns.st.line fail data\ $+ %lab is missing - run /neon repair
@@ -319,8 +327,8 @@ alias neon.selftest {
     inc %i
   }
   %i = 1
-  while ($gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png mentions_new.png banner_about.png,%i,32) != $null) {
-    %lab = $gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png banner_about.png,%i,32)
+  while ($gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png mentions_new.png mpause.png banner_about.png,%i,32) != $null) {
+    %lab = $gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png mentions_new.png mpause.png banner_about.png,%i,32)
     inc %i
     if (!$exists($ns.asset(%lab))) %missing = %missing %lab
   }
@@ -340,6 +348,12 @@ alias neon.selftest {
   else ns.st.line warn the NeonScript toolbar has no buttons - run /neon toolbar rebuild
   if ($ns.rk.chars) ns.st.line ok rank symbols: $ns.rk.chars (modes: $ns.rk.modes $+ )
   else ns.st.line fail no rank symbols known
+  if ($isalias(ns.md.on)) {
+    if (!$ns.md.on) ns.st.line ok media buttons: switched off (/neon media on)
+    elseif (!$exists($ns.md.ps)) ns.st.line warn media buttons: Windows PowerShell was not found - they cannot work
+    elseif ($ns.md.alive) ns.st.line ok media helper is running: $ns.md.line
+    else ns.st.line warn media helper is not running - /neon media restart
+  }
 
   ns.st.head Commands
   %i = 1

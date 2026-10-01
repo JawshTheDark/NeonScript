@@ -7,9 +7,11 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 412 413 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
+  if (%i == 412) return media;watch;1;c
+  if (%i == 413) return media;format;is listening to <artist> - <title>;e
   if (%i == 1001) return chat;mentions;1;c
   if (%i == 1002) return chat;mpm;1;c
   if (%i == 1003) return chat;mwords;_;e
@@ -141,6 +143,9 @@ dialog ns_opt {
   check "Do not disturb (silence sounds and flashing)", 405, 92 104 250 9
   button "Sound manager...", 410, 92 126 78 13
   button "Test sound", 411, 174 126 60 13
+  check "Media buttons: watch what Windows is playing (runs a small hidden PowerShell helper)", 412, 92 150 254 9
+  text "/np says:", 414, 92 166 34 9
+  edit "", 413, 128 164 214 11
 
   ; ---- page 5 : Protection
   box "Protection", 500, 82 38 266 172

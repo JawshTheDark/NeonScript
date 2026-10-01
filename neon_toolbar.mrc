@@ -6,8 +6,8 @@
 ;  and a right-click menu of your own.  Stored in custom.ini.
 ; ============================================================================
 
-alias ns.tb.all return connect servers channels favorites chanctl query away dnd sound notify mentions dash theme fx symbols protect access dcc logs options help
-alias ns.tb.default return connect servers channels favorites chanctl query - away dnd sound notify mentions - dash theme fx symbols - protect access dcc logs - options help
+alias ns.tb.all return connect servers channels favorites chanctl query away dnd sound notify mentions mprev mplay mnext dash theme fx symbols protect access dcc logs options help
+alias ns.tb.default return connect servers channels favorites chanctl query - away dnd sound notify mentions - mprev mplay mnext - dash theme fx symbols - protect access dcc logs - options help
 alias ns.tb.order return $ns.get(toolbar,order,$ns.tb.default)
 alias ns.tb.size return $ns.get(toolbar,size,2)
 
@@ -136,6 +136,9 @@ alias ns.tb.tip {
   if (%n == sound) return Sounds $+ $iif($ns.flag(sound,enabled,1),: on,: muted)
   if (%n == notify) return Notify / buddy list
   if (%n == mentions) return Mentions inbox $+ $iif($isalias(ns.mi.unread) && $ns.mi.unread,$chr(32) $+ $chr(40) $+ $ns.mi.unread unread $+ $chr(41))
+  if (%n == mprev) return Previous track
+  if (%n == mnext) return Next track
+  if (%n == mplay) return $iif($isalias(ns.md.track) && $ns.md.track != $null && $ns.md.status != none,$iif($ns.md.status == playing,Pause,Play) $+ $chr(58) $ns.md.track,Play / pause media)
   if (%n == dash) return Dashboard
   if (%n == theme) return Themes
   if (%n == fx) return Text effects
@@ -154,6 +157,7 @@ alias ns.tb.icon {
   if (%n == dnd) return $iif($donotdisturb,dnd_on,dnd_off) $+ .png
   if (%n == sound) return $iif($ns.flag(sound,enabled,1),sound_on,sound_off) $+ .png
   if (%n == mentions) return $iif($isalias(ns.mi.unread) && $ns.mi.unread,mentions_new,mentions) $+ .png
+  if (%n == mplay) return $iif($isalias(ns.md.status) && $ns.md.status == playing,mpause,mplay) $+ .png
   return %n $+ .png
 }
 ; friendly names used by the editor
@@ -164,6 +168,9 @@ alias ns.tb.label {
   if ($1 == away) return Away / back
   if ($1 == dnd) return Do not disturb
   if ($1 == sound) return Sounds on / off
+  if ($1 == mprev) return Media: previous track
+  if ($1 == mplay) return Media: play / pause
+  if ($1 == mnext) return Media: next track
   return $ns.tb.tip($1)
 }
 
@@ -198,13 +205,14 @@ alias -l tbaddcustom {
 ; refresh icons / tooltips / check state to match the current session
 alias ns.tb.sync {
   if (!$ns.flag(toolbar,enabled,1)) return
-  var %sig = $status $donotdisturb $ns.flag(sound,enabled,1) $away $ns.theme.current $ns.tb.size $iif($isalias(ns.mi.unread),$ns.mi.unread,0)
+  var %sig = $status $donotdisturb $ns.flag(sound,enabled,1) $away $ns.theme.current $ns.tb.size $iif($isalias(ns.mi.unread),$ns.mi.unread,0) $iif($isalias(ns.md.sig),$ns.md.sig)
   if (%sig == %ns.tb.last) return
   set %ns.tb.last %sig
   tbupd connect
   tbupd dnd
   tbupd sound
   tbupd mentions
+  tbupd mplay
   if ($toolbar(ns_away).name) {
     toolbar $+(-k,$iif($away,1,0)) ns_away
     toolbar -t ns_away $qt($ns.tb.tip(away))
@@ -253,6 +261,9 @@ alias ns.tb.click {
   if (%n == sound) { neon mute | return }
   if (%n == notify) { notify -s | return }
   if (%n == mentions) { neon mentions | return }
+  if (%n == mprev) { ns.md.send prev | return }
+  if (%n == mplay) { ns.md.send toggle | return }
+  if (%n == mnext) { ns.md.send next | return }
   if (%n == dash) { neon dash | return }
   if (%n == theme) { neon themes | return }
   if (%n == fx) { neon fx | return }

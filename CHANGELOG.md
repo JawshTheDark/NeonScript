@@ -2,6 +2,15 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## Unreleased
+
+* **Media controls** on the toolbar: previous, play / pause and next buttons that control whatever Windows is
+  playing (the same System Media Transport Controls the keyboard media keys use), the play button turns into a
+  pause button while something plays, the tooltip shows the track, and right-click gives Stop, `/np`, copy track.
+  `/np` says what you are listening to in the current channel or query. A small hidden PowerShell helper
+  (`data\media.ps1`) does the talking; it quits with mIRC, and `/neon media off` (or Control Panel > Sounds) stops it.
+* Self-test now checks every artwork file (it silently skipped most of them before) and the media helper.
+
 ## 2026.3.1
 
 * **Connect when mIRC starts now works.** The "Connect when mIRC starts" tick on a server profile was saved but never

@@ -405,6 +405,23 @@ def g_sliders():
         g.ell((kx - 3.2, y - 3.2, kx + 3.2, y + 3.2), fill=WHITE)
     return g
 
+def g_media(kind):
+    """Transport-control glyphs: play, pause, previous, next."""
+    g = Glyph()
+    if kind == "play":
+        g.poly([(11.5, 7.5), (11.5, 24.5), (25, 16)])
+    elif kind == "pause":
+        g.rrect((9.5, 8, 14.5, 24), r=1.3, fill=WHITE)
+        g.rrect((17.5, 8, 22.5, 24), r=1.3, fill=WHITE)
+    elif kind == "next":
+        g.poly([(7.5, 8), (7.5, 24), (19.5, 16)])
+        g.rrect((21.5, 8, 24.8, 24), r=1.2, fill=WHITE)
+    else:
+        g.poly([(24.5, 8), (24.5, 24), (12.5, 16)])
+        g.rrect((7.2, 8, 10.5, 24), r=1.2, fill=WHITE)
+    return g
+
+
 ICONS = {
     # name: (colour top, colour bottom, glyph factory)
     "connect":    ("#2ee6a8", "#0b9e7d", g_power),
@@ -437,6 +454,10 @@ ICONS = {
     "chanctl":    ("#5eead4", "#0f766e", g_sliders),
     "mentions":     ("#7ee787", "#1f9d55", lambda: g_mention(False)),
     "mentions_new": ("#ff9f5a", "#d9480f", lambda: g_mention(True)),
+    "mprev":        ("#7fb0ff", "#3b55d6", lambda: g_media("prev")),
+    "mplay":        ("#2ee6a8", "#0b9e7d", lambda: g_media("play")),
+    "mpause":       ("#ffbf4d", "#e0700b", lambda: g_media("pause")),
+    "mnext":        ("#7fb0ff", "#3b55d6", lambda: g_media("next")),
 }
 
 
