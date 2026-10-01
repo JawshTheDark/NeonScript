@@ -29,6 +29,7 @@ MORE = "more" in ARGS          # Lurker overflow case
 QUIET = "quiet" in ARGS        # ircd with a real quiet list mode: CHANMODES=bq,...  (+q <mask>)
 EXTBAN = "extban" in ARGS      # ircd with extended bans: EXTBAN=~,q  (+b ~q:<mask>)
 NETS = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]
+GHOSTED = [False]
 
 
 def log(line):
@@ -254,7 +255,13 @@ class Client:
             if self.login is None:
                 self.login = " ".join(parts[1:]).lstrip(":")
         elif cmd == "NICK":
-            self.nick = parts[1].lstrip(":")
+            new = parts[1].lstrip(":")
+            if "ghost" in ARGS and new.lower() == "wanted" and not GHOSTED[0]:
+                self.send(f":{SRV} 433 * {new} :Nickname is already in use.")
+                return True
+            if self.registered:
+                self.send(f":{self.nick}!{self.user}@127.0.0.1 NICK :{new}")
+            self.nick = new
             if self.user and not self.registered:
                 if self.cap_open:
                     self.want_welcome = True
@@ -313,6 +320,17 @@ class Client:
             self.send(f":{SRV} 315 {n} {ch} :End of /WHO list.")
         elif cmd == "WHOIS":
             self.whois(parts[-1])
+        elif (cmd == "NICKSERV" and len(parts) > 1) or (cmd == "PRIVMSG" and len(parts) > 2 and parts[1].lower() == "nickserv"):
+            text = " ".join(parts[1:] if cmd == "NICKSERV" else parts[2:]).lstrip(":")
+            log("# NickServ got: " + text.split(" ")[0] + " (" + str(len(text.split(" "))) + " words)")
+            if text.upper().startswith("GHOST"):
+                if text.split(" ")[-1] == "secretpw":
+                    GHOSTED[0] = True
+                    self.send(f":NickServ!NickServ@services.mock NOTICE {self.nick} :Ghost with your nick has been killed.")
+                else:
+                    self.send(f":NickServ!NickServ@services.mock NOTICE {self.nick} :Password incorrect.")
+            elif text.upper().startswith("IDENTIFY"):
+                self.send(f":NickServ!NickServ@services.mock NOTICE {self.nick} :You are now identified.")
         elif cmd == "PRIVMSG" and len(parts) > 2:
             text = " ".join(parts[2:]).lstrip(":")
             if text.strip().lower() == "replay":

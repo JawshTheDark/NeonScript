@@ -2,6 +2,13 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.6.0
+
+* **Automation rules** (`/neon rules`): triggers, conditions, a fixed vocabulary of actions, auto-replies, cool-downs,
+  a dry-run **Test**, an activity log (`/neon rule log`) and a safety breaker.
+* **Alias and popup-menu editor** (`/neon aliases`).
+* **NickServ ghost / recover** per server profile.
+
 ## 2026.5.0
 
 * **Windows toast notifications** for mentions and private messages (`/neon toast`), click-to-jump, background-only,

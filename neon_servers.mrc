@@ -178,6 +178,7 @@ on *:CONNECT:{
     var %j = $ns.srv.get(%id,join)
     if (%j) join %j
     ns.srv.run $ns.srv.get(%id,perform)
+    ns.srv.ghostcheck %id
   }
   ns.srv.run $ns.get(conn,perform)
   if ($ns.flag(conn,keepalive,0)) ns.srv.kaon
@@ -189,6 +190,54 @@ on *:DISCONNECT:{
   var %d = $ns.get(general,reconnect_delay,10)
   ns.say disconnected - reconnecting in %d seconds...
   .timer.nsrc $+ $cid 1 %d scid $cid ns.srv.reconnect
+}
+; ---------------------------------------------------------------- take my nick back from a ghost
+; Network profile switch "Take my nick back if a ghost holds it": when the main nick is in use and mIRC fell back to
+; the alternate one, ask NickServ to GHOST the old session, then change back (and identify again if the profile uses
+; NickServ).  Needs a password in the profile; never echoes it (the commands are quiet).
+alias ns.srv.ghostcheck {
+  var %id = $1, %want = $ns.srv.get(%id,nick), %pw = $ns.srv.get(%id,pass), %lg = $ns.srv.get(%id,login,none)
+  ns.dbg ghostcheck id= $+ %id want= $+ %want me= $+ $me login= $+ %lg ghost= $+ $ns.srv.get(%id,ghost,0) haspw= $+ $iif(%pw,yes,no)
+  if ($ns.srv.get(%id,ghost,0) != 1) || (%want == $null) || (%pw == $null) return
+  if (!$istok(nickserv sasl scram,%lg,32)) return
+  if ($me == %want) return
+  hadd -mu40 ns.ghost $cid 1
+  ns.say my nick $+($chr(2),%want,$chr(2)) is held by someone else - asking NickServ to ghost it...
+  .timer.nsgh $+ $cid -o 1 4 scid $cid ns.srv.ghostgo
+  .timer.nsgf $+ $cid -o 1 16 scid $cid ns.srv.ghostfinish
+}
+alias ns.srv.ghostgo {
+  var %id = $ns.srv.cur, %want = $ns.srv.get(%id,nick), %pw = $ns.srv.get(%id,pass)
+  if (!%id) || (%pw == $null) || ($me == %want) return
+  .msg NickServ GHOST %want %pw
+}
+alias ns.srv.ghostfinish {
+  if (!$hget(ns.ghost,$cid)) return
+  hdel ns.ghost $cid
+  .timer.nsgf $+ $cid off
+  var %id = $ns.srv.cur, %want = $ns.srv.get(%id,nick)
+  if (!%id) || ($me == %want) return
+  nick %want
+  if ($ns.srv.get(%id,login,none) == nickserv) .timer.nsgi $+ $cid -o 1 2 scid $cid ns.srv.ghostident
+}
+alias ns.srv.ghostident {
+  var %id = $ns.srv.cur
+  if (%id) && ($ns.srv.get(%id,pass) != $null) .msg NickServ IDENTIFY $ns.srv.get(%id,pass)
+}
+on *:NOTICE:*:?:{
+  if (!$hget(ns.ghost,$cid)) return
+  if ($nick != NickServ) && ($nick != Nickserv) && ($nick != nickserv) return
+  var %t = $strip($1-)
+  if ($regex(ns.gh,%t,/(?i)(ghost|killed|released|disconnected)/)) && (!$regex(ns.gh2,%t,/(?i)(not online|no such|isn.t|incorrect|denied|invalid)/)) {
+    .timer.nsgh $+ $cid off
+    .timer.nsgw $+ $cid -o 1 1 scid $cid ns.srv.ghostfinish
+    return
+  }
+  if ($regex(ns.gh2,%t,/(?i)(incorrect|denied|invalid)/)) {
+    hdel ns.ghost $cid
+    .timer.nsgf $+ $cid off
+    ns.err NickServ refused the ghost request - check the password in this profile.
+  }
 }
 alias ns.srv.reconnect {
   if ($status == connected) || ($status == connecting) return
@@ -285,7 +334,7 @@ on *:SIGNAL:ns.boot:{
 alias neon.servers ns.dlg ns_srv ns_srv
 dialog ns_srv {
   title "Servers & Networks"
-  size -1 -1 362 238
+  size -1 -1 362 252
   option dbu
   icon 1, 0 0 362 33, $mircexe, 0, noborder
   list 10, 6 38 92 132, size vsbar
@@ -294,7 +343,7 @@ dialog ns_srv {
   text "Add a known network:", 22, 6 192 92 9
   combo 23, 6 202 92 80, drop
 
-  box "Profile", 30, 104 38 252 150
+  box "Profile", 30, 104 38 252 162
   text "Name:", 31, 112 52 36 9
   edit "", 32, 150 50 100 11
   text "Server:", 33, 112 67 36 9
@@ -318,15 +367,16 @@ dialog ns_srv {
   edit "", 51, 150 125 198 11
   check "Connect when mIRC starts", 52, 112 142 120 9
   check "Default profile", 53, 240 142 70 9
-  text "Perform (one command per line):", 54, 112 156 150 9
-  edit "", 55, 112 166 236 18, multi return vsbar autovs
+  check "Take my nick back if a ghost holds it (NickServ GHOST)", 56, 112 155 240 9
+  text "Perform (one command per line):", 54, 112 168 150 9
+  edit "", 55, 112 178 236 18, multi return vsbar autovs
 
-  button "Save", 60, 104 194 50 13
-  button "Connect", 61, 158 194 50 13
-  button "New window", 62, 212 194 56 13
-  button "Bouncer", 65, 270 194 34 13
-  button "Close", 63, 306 194 50 13, ok cancel
-  text "Passwords are stored in profiles.ini next to the script (plain text). Leave blank to be asked by the network instead.", 64, 104 212 252 20
+  button "Save", 60, 104 206 50 13
+  button "Connect", 61, 158 206 50 13
+  button "New window", 62, 212 206 56 13
+  button "Bouncer", 65, 270 206 34 13
+  button "Close", 63, 306 206 50 13, ok cancel
+  text "Passwords are stored in profiles.ini next to the script (protected with Windows DPAPI when neonsec.dll is present). Leave blank to be asked by the network instead.", 64, 104 224 252 24
 }
 on *:DIALOG:ns_srv:init:*:{
   did -g ns_srv 1 $ns.asset(header_servers.png)
@@ -362,7 +412,7 @@ alias -l srvlist {
 alias -l srvclear {
   did -r ns_srv 32,34,36,39,41,45,47,49,51,55
   did -c ns_srv 43 1
-  did -u ns_srv 37,52,53
+  did -u ns_srv 37,52,53,56
   set -u3600 %ns.srvcur $null
 }
 alias -l srvload {
@@ -381,6 +431,7 @@ alias -l srvload {
   did -ra ns_srv 49 $ns.srv.get(%id,srvpass)
   did -ra ns_srv 51 $replace($ns.srv.get(%id,join),$chr(44),$chr(44) $+ $chr(32))
   did $iif($ns.srv.get(%id,auto,0) == 1,-c,-u) ns_srv 52
+  did $iif($ns.srv.get(%id,ghost,0) == 1,-c,-u) ns_srv 56
   did $iif($ns.srv.default == %id,-c,-u) ns_srv 53
   ns.ml.new
   var %k = 1, %p = $ns.srv.get(%id,perform)
@@ -409,6 +460,7 @@ alias -l srvsave {
   ns.srv.set %id srvpass $did(ns_srv,49).text
   ns.srv.set %id join $replace($remove($did(ns_srv,51).text,$chr(32)),$chr(59),$chr(44))
   ns.srv.set %id auto $did(ns_srv,52).state
+  ns.srv.set %id ghost $did(ns_srv,56).state
   var %k = 1, %txt
   while (%k <= $did(ns_srv,55).lines) {
     if ($did(ns_srv,55,%k) != $null) %txt = %txt $+ $iif(%txt,$chr(124)) $+ $did(ns_srv,55,%k)

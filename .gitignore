@@ -45,3 +45,9 @@ desktop.ini
 /topic_tpl.ini
 /data/stats.dat
 /data/bncmarks.dat
+
+# your own automation rules, aliases and menu items
+/rules.ini
+/usercode.ini
+/user_alias.mrc
+/user_menu.mrc

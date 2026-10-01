@@ -65,6 +65,23 @@ Right-click any toolbar button for its own menu.
 * **Away / sound / DND**, **text effects**, **symbol map**, **F-key hotkeys**, **clone scanner**, **dashboard**,
   small games and a channel bot (`!roll !8ball !seen ...`).
 
+## Automation
+
+* **Rules** (`/neon rules`) - *when* something happens (a message, a mention, a private message, a join, part, quit, kick,
+  nick change, topic, invite, connect ...), *where* (network, channels), *from whom* (nick/address wildcards, `ops`,
+  `voice`, `norank`, `userlist`, `!ops` ...), *matching what* (wildcards or `re:<regex>`), with a cool-down, "only while
+  away / here" and a chance, *then* a list of actions: `say`, `reply`, `msg`, `notice`, `action`, `echo`, `kick`, `ban`,
+  `kickban`, `quiet`, `voice`, `mode`, `join`, `part`, `away`, `ignore`, `toast`, `speak`, `sound`, `wait`, `stop`, `log`.
+  Auto-replies are just rules. Starter templates are built in; **Test** shows what a rule would send without sending it.
+  Text from other people is only ever substituted as data (a nick like `x|quit` cannot run anything), rules never
+  answer your own lines, actions go out through a throttled queue, and a breaker pauses every rule for five minutes if
+  they fire more than 40 times a minute (`/neon rule resume`).
+* **Aliases and popups** (`/neon aliases`) - your own commands and right-click / menubar items, written out as ordinary
+  script files (`user_alias.mrc`, `user_menu.mrc`). Names are checked so you cannot replace mIRC's commands.
+* **NickServ ghost** - the server profile switch "Take my nick back if a ghost holds it": when your nick is taken and mIRC
+  falls back to the alternate, NeonScript asks NickServ to GHOST the old session, changes back and identifies again.
+  The commands are quiet, so the password never shows in a window.
+
 ## Windows integration
 
 * **Toast notifications** (`/neon toast on`) - mentions and private messages as real Windows notifications while mIRC is
@@ -178,6 +195,7 @@ neon_theme.mrc  neon_mts.mrc  neon_toolbar.mrc  neon_events.mrc  neon_dialogs.mr
 neon_servers.mrc  neon_bnc.mrc  neon_chan.mrc  neon_protect.mrc  neon_hud.mrc  neon_tools.mrc
 neon_away.mrc  neon_sound.mrc  neon_media.mrc  neon_fun.mrc  neon_alias.mrc
 neon_win.mrc          Windows toasts, speech, /paste
+neon_auto.mrc         automation rules      neon_usr.mrc   alias and popup editor
 neon_mod.mrc          staff log, quiet/mute, mass actions, topic templates
 neon_stats.mrc        channel stats
 neon_privacy.mrc      ignore manager, CTCP privacy
