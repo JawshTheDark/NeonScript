@@ -10,6 +10,8 @@
 /neon servers|Servers & Networks: profiles, logins (NickServ / SASL), perform lines, auto-join
 /neon bnc [profile]|Bouncer settings for a profile - Lurker, ZNC or soju (account, network, token, replay handling)
 /neon bnc add <name> <host> [port] <user> [network]|Quick Lurker profile over TLS, then paste your API token
+/neon bncdash|Bouncer dashboard: every bouncer network with its state, lag and unread mentions - connect, disconnect, open or close them all
+/neon bnc openall, /neon bnc closeall|Open (a few seconds apart) or close every bouncer network profile
 /neon bnc marks [reset]|Which replayed messages count as already read (Lurker re-sends its whole buffer each connect); reset shows them all once more
 /neon bnc pin / forget|Trust, or forget, the TLS certificate of the bouncer you are connected to
 #Channel tools

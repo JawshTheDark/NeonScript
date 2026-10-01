@@ -2,6 +2,11 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.7.0
+
+* **Bouncer dashboard** (`/neon bncdash`): every Lurker / ZNC / soju network profile with its state, lag and unread
+  mentions, connect / disconnect / reconnect buttons, **Open all** and **Close all** (`/neon bnc openall|closeall`).
+
 ## 2026.6.0
 
 * **Automation rules** (`/neon rules`): triggers, conditions, a fixed vocabulary of actions, auto-replies, cool-downs,

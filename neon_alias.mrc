@@ -473,6 +473,7 @@ menu status {
   Servers && networks...:neon servers
   Away...:neon away
   Mentions inbox...:neon mentions
+  Bouncer dashboard...:neon bncdash
   Look
   .Themes...:neon themes
   .Dashboard:neon dash

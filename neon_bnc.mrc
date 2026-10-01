@@ -384,6 +384,14 @@ alias ns.bnc.marksreset {
 }
 alias neon.bnc {
   var %c = $lower($1)
+  if (%c == openall) {
+    ns.say opening $ns.bd.openall networks, a few seconds apart...
+    return
+  }
+  if (%c == closeall) {
+    ns.say closing $ns.bd.closeall bouncer connections.
+    return
+  }
   if (%c == marks) {
     if ($2 == reset) {
       ns.bnc.marksreset
@@ -573,3 +581,172 @@ alias -l ns.bnc.dlgsave {
   ns.set bnc dedupe $did(ns_bnc,24).state
   ns.set bnc clearact $did(ns_bnc,25).state
 }
+
+; ============================================================================
+;  Bouncer dashboard   /neon bncdash        Open all   /neon bnc openall      Close all   /neon bnc closeall
+;  One line per bouncer profile (Lurker / ZNC / soju network): connected or not, lag, unread mentions, with
+;  buttons to connect, disconnect or reconnect each one - and to open or close every network in one go.
+; ============================================================================
+; bouncer profiles that name a network (the ones that make a connection of their own)
+alias ns.bd.ids {
+  var %i = 1, %id, %o
+  while ($gettok($ns.srv.ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    if ($ns.bnc.type(%id) != none) && ($ns.srv.get(%id,bncnet) != $null) %o = %o %id
+  }
+  return %o
+}
+; the connection id open for a profile ("" if none)
+alias ns.bd.cid {
+  var %i = 1, %c
+  while (%i <= $scon(0)) {
+    %c = $scon(%i).cid
+    inc %i
+    if ($hget(ns.cidprof,%c) == $1) return %c
+  }
+  return $null
+}
+alias ns.bd.status {
+  var %c = $ns.bd.cid($1), %i = 1
+  if (!%c) return not open
+  while (%i <= $scon(0)) {
+    if ($scon(%i).cid == %c) return $scon(%i).status
+    inc %i
+  }
+  return not open
+}
+; unread mentions of the network a connection is on
+alias ns.bd.unread {
+  var %c = $ns.bd.cid($1), %i = 1, %net, %n = $hget(ns.mi,n), %k, %v, %cnt = 0
+  if (!%c) return 0
+  while (%i <= $scon(0)) {
+    if ($scon(%i).cid == %c) %net = $scon(%i).network
+    inc %i
+  }
+  if (%net == $null) || (!%n) return 0
+  %k = $max(1,$calc(%n - 199))
+  while (%k <= %n) {
+    %v = $hget(ns.mi,%k)
+    if (%v != $null) && ($gettok(%v,6,9) == 0) && ($gettok(%v,2,9) == %net) inc %cnt
+    inc %k
+  }
+  return %cnt
+}
+; connect every bouncer network that is not open yet, a few seconds apart
+alias ns.bd.openall {
+  var %ids = $ns.bd.ids, %i = 1, %id, %at = 0, %n = 0
+  while ($gettok(%ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    if ($ns.bd.status(%id) == connected) || ($ns.bd.status(%id) == connecting) continue
+    inc %n
+    if (%at == 0) && ($status == disconnected) && (!$ns.bd.cid(%id)) {
+      ns.srv.connect %id
+      %at = 1
+    }
+    else {
+      inc %at 3
+      .timer -o 1 %at ns.srv.connect %id new
+    }
+  }
+  return %n
+}
+alias ns.bd.closeall {
+  var %ids = $ns.bd.ids, %i = 1, %id, %c, %n = 0
+  while ($gettok(%ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    %c = $ns.bd.cid(%id)
+    if (%c) && ($ns.bd.status(%id) isin connected connecting) {
+      scid %c disconnect
+      inc %n
+    }
+  }
+  return %n
+}
+alias neon.bncdash ns.dlg ns_bncdash ns_bncdash
+dialog ns_bncdash {
+  title "Bouncer Dashboard"
+  size -1 -1 330 214
+  option dbu
+  icon 1, 0 0 330 30, $mircexe, 0, noborder
+  text "One line per bouncer network.  Lag is measured every 30 seconds.", 2, 6 36 318 9
+  list 3, 6 48 318 108, size vsbar hsbar
+  button "Connect", 4, 6 160 50 13
+  button "Disconnect", 5, 60 160 50 13
+  button "Reconnect", 6, 114 160 50 13
+  button "Open all", 7, 6 178 50 13
+  button "Close all", 8, 60 178 50 13
+  button "Refresh", 9, 114 178 50 13
+  button "Bouncer settings...", 10, 170 160 76 13
+  text "", 11, 6 196 250 9
+  button "Close", 12, 276 196 48 13, ok cancel
+}
+on *:DIALOG:ns_bncdash:init:*:{
+  did -g ns_bncdash 1 $ns.asset(header_bncdash.png)
+  if ($isalias(ns.lag.ping)) ns.lag.ping
+  ns.bd.fill
+  .timer.nsbd 0 5 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:close:*:{ .timer.nsbd off }
+alias ns.bd.fill {
+  if (!$dialog(ns_bncdash)) { .timer.nsbd off | return }
+  var %ids = $ns.bd.ids, %i = 1, %id, %st, %c, %lag, %un, %glyph, %sel = $did(ns_bncdash,3).sel
+  did -r ns_bncdash 3
+  while ($gettok(%ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    %st = $ns.bd.status(%id)
+    %c = $ns.bd.cid(%id)
+    %lag = $iif(%c && $hget(ns.lag,%c) != $null,$hget(ns.lag,%c) $+ ms,-)
+    %un = $ns.bd.unread(%id)
+    %glyph = $iif(%st == connected,$chr(9679) up,$iif(%st == connecting,$chr(9684) connecting,$chr(9675) %st))
+    did -a ns_bncdash 3 $+(%glyph,$chr(32),$chr(32),$ns.srv.get(%id,name),$chr(32),$chr(32),$chr(40),$ns.bnc.tname($ns.bnc.type(%id)),$chr(47),$ns.srv.get(%id,bncnet),$chr(41),$chr(32),$chr(32),lag %lag,$chr(32),$chr(32),%un unread)
+  }
+  if (!$did(ns_bncdash,3).lines) did -a ns_bncdash 3 (no bouncer networks yet - /neon bnc add, then Discover networks)
+  elseif (%sel) did -c ns_bncdash 3 %sel
+  did -ra ns_bncdash 11 $numtok(%ids,32) bouncer network(s) $+ $chr(44) $calc($numtok($ns.bd.live,32)) connected.
+}
+alias ns.bd.live {
+  var %ids = $ns.bd.ids, %i = 1, %o
+  while ($gettok(%ids,%i,32) != $null) {
+    if ($ns.bd.status($v1) == connected) %o = %o $v1
+    inc %i
+  }
+  return %o
+}
+alias -l bdsel return $gettok($ns.bd.ids,$did(ns_bncdash,3).sel,32)
+on *:DIALOG:ns_bncdash:sclick:4:{
+  var %id = $bdsel, %c
+  if (!%id) return
+  %c = $ns.bd.cid(%id)
+  if (%c) scid %c ns.srv.connect %id
+  else ns.srv.connect %id new
+  .timer.nsbdr -o 1 4 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:sclick:5:{
+  var %id = $bdsel, %c = $ns.bd.cid($bdsel)
+  if (%id) && (%c) scid %c disconnect
+  .timer.nsbdr -o 1 2 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:sclick:6:{
+  var %id = $bdsel, %c = $ns.bd.cid($bdsel)
+  if (!%id) return
+  if (%c) {
+    scid %c disconnect
+    .timer -o 1 2 scid %c ns.srv.connect %id
+  }
+  else ns.srv.connect %id new
+  .timer.nsbdr -o 1 6 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:sclick:7:{
+  did -ra ns_bncdash 11 Opening $ns.bd.openall network(s)...
+  .timer.nsbdr -o 1 5 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:sclick:8:{
+  did -ra ns_bncdash 11 Closing $ns.bd.closeall connection(s)...
+  .timer.nsbdr -o 1 3 ns.bd.fill
+}
+on *:DIALOG:ns_bncdash:sclick:9:{ ns.bd.fill }
+on *:DIALOG:ns_bncdash:sclick:10:{ if ($bdsel) neon bnc $bdsel }

@@ -150,6 +150,10 @@ Also: certificate pinning for self-signed bouncers, replayed history shown dimme
 quiet during replay" switch (no sounds, away log, protections, auto-op, greetings or bot replies for old messages),
 and an optional ZNC `*playback` request on attach. Port 6697 is the usual TLS bouncer port.
 
+**Bouncer dashboard** (`/neon bncdash`, status-window right-click) lists every bouncer network with its state, lag and unread
+mentions and lets you connect, disconnect or reconnect each one; `/neon bnc openall` / `closeall` do all of them, a few
+seconds apart.
+
 **Lurker re-sends its whole buffer on every connect** (it does not mark history as delivered), which lights every
 channel red again each time. NeonScript remembers the newest message you have seen in each window and drops replayed
 lines that are not newer (`/neon bnc marks reset` forgets that), and clears the activity colour a replay leaves behind
