@@ -2,6 +2,11 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.8.0
+
+* **Icon sets**: flat, outline and mono variants of every toolbar icon, switchable live in Control Panel > Display.
+* **Sound packs**: Chime, Arcade and Soft (synthesised, original), selectable in Control Panel > Sounds & notifications.
+
 ## 2026.7.0
 
 * **Bouncer dashboard** (`/neon bncdash`): every Lurker / ZNC / soju network profile with its state, lag and unread

@@ -19,6 +19,9 @@ alias ns.snd.label {
 }
 ; built-in defaults (the first existing file wins; empty = silent)
 alias ns.snd.default {
+  ; a sound pack from Control Panel > Sounds (assets\sounds\<pack>\<event>.wav) wins over the Windows defaults
+  var %pk = $ns.get(sound,pack,windows), %pf = $+($scriptdir,assets\sounds\,%pk,\,$1,.wav)
+  if (%pk != windows) && ($exists(%pf)) return %pf
   var %d = $+($windir,\Media\), %n, %i = 1, %list
   if ($1 == connect) %list = Windows Logon.wav;Windows Notify System Generic.wav;Windows Ding.wav
   if ($1 == disconnect) %list = Windows Hardware Remove.wav;Windows Background.wav

@@ -327,8 +327,8 @@ alias neon.selftest {
     inc %i
   }
   %i = 1
-  while ($gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png header_slog.png header_mass.png header_tpl.png header_stats.png header_ignore.png mentions_new.png mpause.png banner_about.png,%i,32) != $null) {
-    %lab = $gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png header_slog.png header_mass.png header_tpl.png header_stats.png header_ignore.png mentions_new.png mpause.png banner_about.png,%i,32)
+  while ($gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png header_slog.png header_mass.png header_tpl.png header_stats.png header_ignore.png header_rules.png header_alias.png header_bncdash.png mentions_new.png mpause.png icons_flat\connect.png icons_outline\connect.png icons_mono\connect.png sounds\chime\connect.wav sounds\arcade\connect.wav sounds\soft\connect.wav banner_about.png,%i,32) != $null) {
+    %lab = $gettok(banner.png splash.bmp bg_dark.bmp bg_light.bmp neon.ico header_options.png header_servers.png header_cc.png header_debug.png header_backup.png header_mentions.png header_link.png header_slog.png header_mass.png header_tpl.png header_stats.png header_ignore.png header_rules.png header_alias.png header_bncdash.png mentions_new.png mpause.png icons_flat\connect.png icons_outline\connect.png icons_mono\connect.png sounds\chime\connect.wav sounds\arcade\connect.wav sounds\soft\connect.wav banner_about.png,%i,32)
     inc %i
     if (!$exists($ns.asset(%lab))) %missing = %missing %lab
   }

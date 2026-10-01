@@ -41,7 +41,7 @@ alias ns.cb.newid {
 alias ns.cb.iconfile {
   var %i = $ns.cb.get($1,icon,wand)
   if ($pos(%i,$chr(92))) || ($pos(%i,$chr(58))) || ($pos(%i,$chr(47))) return %i
-  return $ns.asset(%i $+ .png)
+  return $ns.icon(%i $+ .png)
 }
 alias ns.cb.isimg return $iif($right($1,4) isin .png .bmp .jpg .gif jpeg,$true,$false)
 ; run every line of a button's command list (lines separated by | in the ini)
@@ -192,7 +192,7 @@ alias ns.tb.build {
   ns.tb.resync
 }
 alias -l tbadd {
-  toolbar $+(-avz,$ns.tb.size) $+(ns_,$1) $qt($ns.tb.tip($1)) $qt($ns.asset($ns.tb.icon($1))) "/ns.tb.click $!1" $+(@nstb_,$1)
+  toolbar $+(-avz,$ns.tb.size) $+(ns_,$1) $qt($ns.tb.tip($1)) $qt($ns.icon($ns.tb.icon($1))) "/ns.tb.click $!1" $+(@nstb_,$1)
 }
 alias -l tbaddcustom {
   var %id = $1, %f = $ns.cb.iconfile(%id), %n = $ns.cb.get(%id,iconidx,0)
@@ -205,7 +205,7 @@ alias -l tbaddcustom {
 ; refresh icons / tooltips / check state to match the current session
 alias ns.tb.sync {
   if (!$ns.flag(toolbar,enabled,1)) return
-  var %sig = $status $donotdisturb $ns.flag(sound,enabled,1) $away $ns.theme.current $ns.tb.size $iif($isalias(ns.mi.unread),$ns.mi.unread,0) $iif($isalias(ns.md.sig),$ns.md.sig)
+  var %sig = $status $donotdisturb $ns.flag(sound,enabled,1) $away $ns.theme.current $ns.tb.size $ns.get(toolbar,iconset,glossy) $iif($isalias(ns.mi.unread),$ns.mi.unread,0) $iif($isalias(ns.md.sig),$ns.md.sig)
   if (%sig == %ns.tb.last) return
   set %ns.tb.last %sig
   tbupd connect
@@ -224,7 +224,7 @@ alias ns.tb.resync {
 }
 alias -l tbupd {
   if (!$toolbar($+(ns_,$1)).name) return
-  toolbar -pv $+(ns_,$1) $qt($ns.asset($ns.tb.icon($1)))
+  toolbar -pv $+(ns_,$1) $qt($ns.icon($ns.tb.icon($1)))
   toolbar -t $+(ns_,$1) $qt($ns.tb.tip($1))
 }
 

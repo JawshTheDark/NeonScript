@@ -5,12 +5,18 @@
 ; ============================================================================
 
 alias ns.name return NeonScript
-alias ns.ver return 2026.7.0
+alias ns.ver return 2026.8.0
 alias ns.tag return $+($ns.name,$chr(32),$ns.ver)
 alias ns.ini return $+($scriptdir,neon.ini)
 alias ns.profini return $+($scriptdir,profiles.ini)
 alias ns.asset return $+($scriptdir,assets\,$1)
 alias ns.data return $+($scriptdir,data\,$1)
+; toolbar icon file for a bundled name: the chosen icon set first (Display page), the standard glossy one otherwise
+alias ns.icon {
+  var %set = $ns.get(toolbar,iconset,glossy), %f = $+($scriptdir,assets\icons_,%set,\,$1)
+  if (%set != glossy) && ($exists(%f)) return %f
+  return $ns.asset($1)
+}
 alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_web neon_theme neon_toolbar neon_events neon_mts neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_fun neon_alias
 
 ; ---------------------------------------------------------------- settings API

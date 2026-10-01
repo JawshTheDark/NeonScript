@@ -461,11 +461,51 @@ ICONS = {
 }
 
 
+def recolor(img, rgb, only_white=True):
+    """Re-tint the (near) white parts of a glyph layer, keeping alpha."""
+    px = img.load()
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a and (not only_white or (r > 235 and g > 235 and b > 235)):
+                px[x, y] = (rgb[0], rgb[1], rgb[2], a)
+    return img
+
+
+def compose_style(c1, c2, glyph, style):
+    """Icon variants: flat (solid tile), outline (ring + tinted glyph), mono (neutral slate tile)."""
+    n = ICON * SS
+    base = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    d = ImageDraw.Draw(base)
+    box = [SS * 1, SS * 1, n - SS * 1 - 1, n - SS * 1 - 1]
+    g = glyph.im.copy()
+    if style == "flat":
+        d.rounded_rectangle(box, radius=SS * 7, fill=lerp(c1, c2, 0.55) + (255,))
+    elif style == "outline":
+        d.rounded_rectangle(box, radius=SS * 7, fill=(19, 20, 33, 235), outline=c1 + (255,), width=SS * 2)
+        g = recolor(g, c1)
+    else:  # mono
+        d.rounded_rectangle(box, radius=SS * 7, fill=(43, 46, 64, 255), outline=(78, 83, 110, 255), width=SS)
+        g = recolor(g, (226, 229, 242))
+    out = Image.alpha_composite(base, g)
+    return out.resize((ICON, ICON), Image.LANCZOS)
+
+
+ICON_SETS = ("flat", "outline", "mono")
+
+
 def make_icons():
     for name, (c1, c2, factory) in ICONS.items():
         img = compose(hexc(c1), hexc(c2), factory())
         img.save(os.path.join(OUT, f"{name}.png"))
     print(f"  {len(ICONS)} toolbar icons")
+    for style in ICON_SETS:
+        d = os.path.join(OUT, f"icons_{style}")
+        os.makedirs(d, exist_ok=True)
+        for name, (c1, c2, factory) in ICONS.items():
+            compose_style(hexc(c1), hexc(c2), factory(), style).save(os.path.join(d, f"{name}.png"))
+    print(f"  {len(ICON_SETS)} alternative icon sets (flat, outline, mono)")
 
 
 # --------------------------------------------------------------------------- synthwave art
@@ -762,6 +802,119 @@ def make_theme_thumbs():
 
 
 
+# --------------------------------------------------------------------------- sound packs
+import wave
+import array
+import random
+
+RATE = 44100
+
+
+def _env(i, n, attack, decay_k):
+    t = i / RATE
+    a = min(1.0, t / attack) if attack else 1.0
+    tail = min(1.0, (n - i) / (RATE * 0.02))          # 20 ms fade-out so nothing clicks
+    return a * math.exp(-decay_k * t) * tail
+
+
+def _tone(freq, dur, kind="sine", vol=0.4, attack=0.004, decay_k=5.0, partials=None):
+    n = int(RATE * dur)
+    out = []
+    for i in range(n):
+        t = i / RATE
+        if kind == "square":
+            s = 1.0 if math.sin(2 * math.pi * freq * t) >= 0 else -1.0
+            s *= 0.55
+        elif kind == "tri":
+            s = 2 * abs(2 * ((freq * t) % 1.0) - 1) - 1
+        elif kind == "bell":
+            s = sum(a * math.sin(2 * math.pi * freq * m * t) for m, a in ((1, 1.0), (2.01, 0.45), (3.2, 0.2), (4.7, 0.1)))
+            s /= 1.75
+        elif kind == "noise":
+            s = random.uniform(-1, 1)
+        else:
+            s = math.sin(2 * math.pi * freq * t)
+        out.append(s * vol * _env(i, n, attack, decay_k))
+    return out
+
+
+def _seq(parts, gap=0.0):
+    """parts = [(start_seconds, samples)] mixed into one buffer."""
+    end = max(int(RATE * st) + len(smp) for st, smp in parts)
+    buf = [0.0] * end
+    for st, smp in parts:
+        o = int(RATE * st)
+        for i, v in enumerate(smp):
+            buf[o + i] += v
+    return buf
+
+
+def _save_wav(path, samples, gain=1.0):
+    peak = max(1e-9, max(abs(v) for v in samples))
+    scale = (0.8 / peak) * gain
+    data = array.array("h", (int(max(-1, min(1, v * scale)) * 32767) for v in samples))
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(RATE)
+        w.writeframes(data.tobytes())
+
+
+NOTE = {"C4": 261.63, "E4": 329.63, "G4": 392.0, "A4": 440.0, "C5": 523.25, "D5": 587.33, "E5": 659.25, "G5": 783.99,
+        "A5": 880.0, "B5": 987.77, "C6": 1046.5, "E6": 1318.5, "G6": 1568.0, "A3": 220.0, "E3": 164.81, "C3": 130.81}
+
+
+def make_sounds():
+    random.seed(7)
+    base = os.path.join(OUT, "sounds")
+    packs = {}
+    # chime: soft bell tones
+    b = lambda f, d=0.5, v=0.45, k=6.0: _tone(NOTE[f] if isinstance(f, str) else f, d, "bell", v, 0.003, k)
+    packs["chime"] = {
+        "connect": _seq([(0, b("C5", 0.6)), (0.14, b("G5", 0.8))]),
+        "disconnect": _seq([(0, b("G5", 0.5)), (0.14, b("C5", 0.8, 0.4))]),
+        "highlight": _seq([(0, b("E6", 0.45, 0.5, 7)), (0.12, b("E6", 0.6, 0.4, 7))]),
+        "pm": _seq([(0, b("A5", 0.4)), (0.1, b("E6", 0.6, 0.4))]),
+        "kick": _seq([(0, _tone(110, 0.35, "sine", 0.6, 0.002, 7)), (0.05, _tone(117, 0.5, "sine", 0.4, 0.002, 6))]),
+        "invite": _seq([(0, b("C5", 0.35)), (0.11, b("E5", 0.35)), (0.22, b("G5", 0.7))]),
+        "join": _seq([(0, b("A5", 0.35, 0.3, 8))]),
+        "error": _seq([(0, _tone(NOTE["A3"], 0.25, "tri", 0.5, 0.004, 4)), (0.22, _tone(NOTE["E3"], 0.45, "tri", 0.5, 0.004, 4))]),
+    }
+    # arcade: chip-tune square beeps
+    sq = lambda f, d=0.09, v=0.35: _tone(NOTE[f] if isinstance(f, str) else f, d, "square", v, 0.001, 1.5)
+    packs["arcade"] = {
+        "connect": _seq([(0, sq("C5")), (0.09, sq("E5")), (0.18, sq("G5")), (0.27, sq("C6", 0.18))]),
+        "disconnect": _seq([(0, sq("C6")), (0.09, sq("G5")), (0.18, sq("E5")), (0.27, sq("C5", 0.18))]),
+        "highlight": _seq([(0, sq("E6", 0.07)), (0.1, sq("E6", 0.07)), (0.2, sq("G6", 0.12))]),
+        "pm": _seq([(0, sq("B5", 0.07)), (0.07, sq("E6", 0.28))]),
+        "kick": _seq([(0, _tone(0, 0.35, "noise", 0.5, 0.001, 9)), (0, _tone(160, 0.3, "square", 0.3, 0.001, 8))]),
+        "invite": _seq([(0, sq("G4")), (0.1, sq("C5")), (0.2, sq("E5")), (0.3, sq("G5", 0.25))]),
+        "join": _seq([(0, sq("A5", 0.06, 0.25))]),
+        "error": _seq([(0, sq(180, 0.12)), (0.14, sq(120, 0.25))]),
+    }
+    # soft: tiny quiet ticks
+    tk = lambda f, d=0.07, v=0.3: _tone(f, d, "sine", v, 0.002, 28)
+    packs["soft"] = {
+        "connect": _seq([(0, tk(660)), (0.07, tk(880))]),
+        "disconnect": _seq([(0, tk(880)), (0.07, tk(660))]),
+        "highlight": _seq([(0, tk(1040, 0.1, 0.4))]),
+        "pm": _seq([(0, tk(780, 0.09, 0.35)), (0.08, tk(980, 0.09, 0.35))]),
+        "kick": _seq([(0, tk(200, 0.15, 0.5))]),
+        "invite": _seq([(0, tk(700)), (0.07, tk(840)), (0.14, tk(1000))]),
+        "join": _seq([(0, tk(560, 0.06, 0.2))]),
+        "error": _seq([(0, tk(240, 0.12, 0.45)), (0.1, tk(200, 0.14, 0.45))]),
+    }
+    gains = {"chime": 0.62, "arcade": 0.42, "soft": 0.28}
+    n = 0
+    for pack, sounds in packs.items():
+        d = os.path.join(base, pack)
+        os.makedirs(d, exist_ok=True)
+        for name, smp in sounds.items():
+            _save_wav(os.path.join(d, f"{name}.wav"), smp, gains[pack])
+            n += 1
+    print(f"  {n} sounds in {len(packs)} sound packs")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     print("NeonScript assets ->", OUT)
@@ -772,6 +925,7 @@ def main():
     make_app_icon()
     make_backgrounds()
     make_theme_thumbs()
+    make_sounds()
     print("done")
 
 

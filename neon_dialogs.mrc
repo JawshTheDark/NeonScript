@@ -7,7 +7,7 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1102) return privacy;ctcp_mode;generic;s;normal,generic,silent
@@ -27,6 +27,8 @@ alias -l reg {
   if (%i == 1110) return privacy;ctcp_note;1;c
   if (%i == 1111) return staff;log;1;c
   if (%i == 1112) return stats;on;1;c
+  if (%i == 316) return toolbar;iconset;glossy;s;glossy,flat,outline,mono
+  if (%i == 416) return sound;pack;windows;s;windows,chime,arcade,soft
   if (%i == 412) return media;watch;1;c
   if (%i == 413) return media;format;is listening to <artist> - <title>;e
   if (%i == 1001) return chat;mentions;1;c
@@ -92,6 +94,8 @@ alias -l optnames {
   if ($1 == 302) return Unicode symbols;Windows (ANSI) symbols;ASCII only
   if ($1 == 308) return Off;[HH:nn];[HH:nn:ss];(HH:nn);HH:nn
   if ($1 == 506) return Ignore them;Kick them (if I am an op);Ignore and kick
+  if ($1 == 316) return Glossy (default);Flat;Outline;Mono
+  if ($1 == 416) return Windows sounds (default);Chime;Arcade;Soft
   if ($1 == 1215) return POST (form upload);PUT (raw upload)
   if ($1 == 1102) return Answer normally (mIRC's default);Hide them - TIME is answered in UTC;Never answer anything (except PING)
 }
@@ -152,6 +156,8 @@ dialog ns_opt {
   edit "", 307, 230 153 22 11, limit 4
   text "users (0 = never)", 314, 256 155 84 9
   button "Theme gallery...", 315, 92 176 78 13
+  text "Toolbar icons:", 317, 92 195 52 9
+  combo 316, 148 193 110 60, drop
 
   ; ---- page 4 : Sounds
   box "Sounds && notifications", 400, 82 38 266 172
@@ -160,8 +166,10 @@ dialog ns_opt {
   check "Play a sound when I receive a private message", 403, 92 78 250 9
   check "Play connect and disconnect sounds", 404, 92 91 250 9
   check "Do not disturb (silence sounds and flashing)", 405, 92 104 250 9
-  button "Sound manager...", 410, 92 126 78 13
-  button "Test sound", 411, 174 126 60 13
+  text "Sound pack:", 415, 92 114 44 9
+  combo 416, 138 112 120 60, drop
+  button "Sound manager...", 410, 92 128 78 13
+  button "Test sound", 411, 174 128 60 13
   check "Media buttons: watch what Windows is playing (runs a small hidden PowerShell helper)", 412, 92 150 254 9
   text "/np says:", 414, 92 166 34 9
   edit "", 413, 128 164 214 11
