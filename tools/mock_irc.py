@@ -173,6 +173,43 @@ class Client:
             self.send(line)
             time.sleep(delay)
 
+    def xtest(self, chan):
+        """Channel bot extras: quotes, karma, a poll with votes, games."""
+        steps = [
+            ("Nova!nova@host.example", "!addquote the quick brown fox"),
+            ("Kira!kira@10.0.0.2", "!addquote never gonna give you up"),
+            ("Nova!nova@host.example", "!quote"),
+            ("Kira!kira@10.0.0.2", "!quote fox"),
+            ("Nova!nova@host.example", "!quote 2"),
+            ("Kira!kira@10.0.0.2", "!delquote 1"),
+            ("Owner!own@owner.example", "!delquote 1"),
+            ("Kira!kira@10.0.0.2", "Nova++"),
+            ("Owner!own@owner.example", "Nova++"),
+            ("Kira!kira@10.0.0.2", "Kira++"),
+            ("Owner!own@owner.example", "Nova--"),
+            ("Kira!kira@10.0.0.2", "!karma Nova"),
+            ("Kira!kira@10.0.0.2", "!top"),
+            ("Nova!nova@host.example", "!poll lunch? | pizza | tacos"),
+            ("Owner!own@owner.example", "!poll 1m Best colour? | red | green | blue"),
+            ("Nova!nova@host.example", "!vote 2"),
+            ("Kira!kira@10.0.0.2", "!vote 2"),
+            ("Zed!zed@zed.example", "!vote 3"),
+            ("Kira!kira@10.0.0.2", "!vote 9"),
+            ("Nova!nova@host.example", "!results"),
+            ("Nova!nova@host.example", "!endpoll"),
+            ("Owner!own@owner.example", "!endpoll"),
+            ("Nova!nova@host.example", "!guess"),
+            ("Kira!kira@10.0.0.2", "!guess 50"),
+            ("Nova!nova@host.example", "!rps rock"),
+            ("Kira!kira@10.0.0.2", "!rps lizard"),
+            ("Nova!nova@host.example", "!hangman"),
+            ("Kira!kira@10.0.0.2", "!h e"),
+            ("Nova!nova@host.example", "!h a"),
+        ]
+        for who, text in steps:
+            self.send(f":{who} PRIVMSG {chan} :{text}")
+            time.sleep(1.15)
+
     def rtest(self, chan):
         """Events for the automation-rule tests: replies, a bad word, a join, a nick with a pipe, a mention, a PM, a kick."""
         me = self.nick
@@ -343,6 +380,8 @@ class Client:
                 threading.Thread(target=self.pm, daemon=True).start()
             if text.strip().lower() == "ctcp":
                 threading.Thread(target=self.ctcp, daemon=True).start()
+            if text.strip().lower() == "xtest":
+                threading.Thread(target=self.xtest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "rtest":
                 threading.Thread(target=self.rtest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "utf8":

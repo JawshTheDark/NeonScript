@@ -65,6 +65,16 @@ Right-click any toolbar button for its own menu.
 * **Away / sound / DND**, **text effects**, **symbol map**, **F-key hotkeys**, **clone scanner**, **dashboard**,
   small games and a channel bot (`!roll !8ball !seen ...`).
 
+## Fun and extras
+
+* **Channel extras** (part of the channel bot - switch it on in Control Panel > Channel commands): `!addquote` / `!quote [n | words]`
+  / `!delquote` (ops), karma with `nick++` / `nick--` plus `!karma` and `!top`, polls (`!poll [5m] Question? | a | b`, `!vote`,
+  `!results`, `!endpoll`), and small games: `!guess`, `!rps`, `!hangman` with `!h <letter>`.
+  `/neon quote add|find|list|del` manages the quote book from your own window. Everything is stored on your PC.
+* **Cards** - `/weather <city>`, `/define <word>` and `/translate <code> <text>` (alias `/tl`) show a framed card; with `-s`
+  they say one line in the channel instead. They contact wttr.in, dictionaryapi.dev and api.mymemory.translated.net, only
+  when you run them, and send only what you typed.
+
 ## Look and feel
 
 * **Icon sets** - Control Panel > Display > Toolbar icons: Glossy (default), Flat, Outline or Mono; applied live

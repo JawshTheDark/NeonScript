@@ -16,10 +16,12 @@ Tiny local web server used to test NeonScript's link / image previews without to
 Every request is appended to the log file given as the second argument (optional).
 """
 import io
+import json
 import struct
 import sys
 import threading
 import time
+import urllib.parse
 import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -128,6 +130,26 @@ class H(BaseHTTPRequestHandler):
                     time.sleep(0.02)
             except OSError:
                 pass
+        elif p.startswith("/wttr/"):
+            city = urllib.parse.unquote(p[6:])
+            line = city + "|Partly cloudy|+18°C|+17°C|62%|↑14km/h\n"
+            self.send_body("text/plain; charset=utf-8", line.encode("utf-8"), honour_range=False)
+        elif p.startswith("/dict/"):
+            word = urllib.parse.unquote(p[6:])
+            if word == "nothingatall":
+                self.send_body("application/json", b'{"title":"No Definitions Found"}', honour_range=False, status=404)
+            else:
+                doc = ('[{"word":"%s","meanings":[{"partOfSpeech":"noun","definitions":[{"definition":"A chemical element, symbol Ne."},'
+                       '{"definition":"A bright \\"glow\\" lamp \\u2014 caf\\u00e9 sign."},{"definition":"Third sense."},{"definition":"Fourth sense."}]},'
+                       '{"partOfSpeech":"adjective","definitions":[{"definition":"Brightly coloured."}]}]}]') % word
+                self.send_body("application/json", doc.encode("utf-8"), honour_range=False)
+        elif p == "/mm":
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            text = q.get("q", [""])[0]
+            lang = q.get("langpair", ["|xx"])[0].split("|")[-1]
+            tr = "[" + lang + "] " + text + " éñ"
+            doc = '{"responseData":{"translatedText":%s},"responseStatus":200}' % json.dumps(tr)
+            self.send_body("application/json", doc.encode("utf-8"), honour_range=False)
         elif p == "/file.zip":
             self.send_body("application/zip", b"PK\x05\x06" + b"\0" * 18)
         else:

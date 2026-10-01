@@ -2,6 +2,13 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.10.0
+
+* **Channel extras**: quotes (`!addquote`, `!quote`, `!delquote`, `/neon quote`), karma (`nick++`, `!karma`, `!top`), polls with
+  timers, and the games `!guess`, `!rps` and `!hangman`.
+* **Web cards**: `/weather`, `/define` and new `/translate` (`/tl`) as framed cards, or one line with `-s`. The old `/weather` and
+  `/define` never reported HTTP errors properly (they compared a whole status line to 200); fixed.
+
 ## 2026.9.0
 
 * **Theme editor** (`/neon themeedit`, Theme Gallery > Theme editor...): all 31 mIRC colour items and the 17 NeonScript event

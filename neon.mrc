@@ -5,7 +5,7 @@
 ; ============================================================================
 
 alias ns.name return NeonScript
-alias ns.ver return 2026.9.0
+alias ns.ver return 2026.10.0
 alias ns.tag return $+($ns.name,$chr(32),$ns.ver)
 alias ns.ini return $+($scriptdir,neon.ini)
 alias ns.profini return $+($scriptdir,profiles.ini)
@@ -17,7 +17,7 @@ alias ns.icon {
   if (%set != glossy) && ($exists(%f)) return %f
   return $ns.asset($1)
 }
-alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_web neon_theme neon_toolbar neon_events neon_mts neon_tedit neon_evt neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_fun neon_alias
+alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_web neon_theme neon_toolbar neon_events neon_mts neon_tedit neon_evt neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_extra neon_fun neon_alias
 
 ; ---------------------------------------------------------------- settings API
 ; $ns.get(section,item,default)  /ns.set section item value

@@ -38,6 +38,8 @@
 /neon rules|Automation rules: when something happens (a message, a join, a kick, a connect ...) do something - auto-replies, greetings, alerts, moderation
 /neon rule on <name>, /neon rule off <name>, /neon rule log, /neon rule resume|Switch a rule on or off, show what fired recently, or resume after the safety breaker paused the rules
 /neon aliases|Alias and popup-menu editor: your own commands and right-click / menubar items, saved as ordinary script files
+/weather [-s] <city>, /define [-s] <word>, /translate [-s] <code> <text>|Weather, dictionary and translation as cards (sent to wttr.in, dictionaryapi.dev, api.mymemory.translated.net only when you run them; -s says it in the channel)
+/neon quote [add <text> | find <words> | <n> | del <n> | list]|The channel's quote database (also !addquote !quote !delquote from the channel bot)
 #Windows
 /neon toast [on|off|test]|Windows notifications (toasts) for mentions and private messages while mIRC is in the background; click one to jump there
 /neon speak [on|off|test|voices|stop]|Read mentions and private messages aloud with the Windows voices

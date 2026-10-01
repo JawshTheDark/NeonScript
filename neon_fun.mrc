@@ -57,6 +57,51 @@ alias calc {
 alias uptime echo -cat info $ns.pfx mIRC $duration($uptime(mirc,3)) $+ , system $duration($uptime(system,3)) $+ $iif($status == connected,$chr(44) connection $duration($uptime(server,3)))
 
 ; ---------------------------------------------------------------- web lookups (explicit commands only)
+; /weather, /define and /translate send what you typed to a public web service, and only when you run them:
+;   weather   wttr.in            the city name
+;   define    dictionaryapi.dev  the word
+;   translate api.mymemory.translated.net   the text (free service, small daily limit)
+; Results appear as a "card" in the window you ran it in; with -s they are said in the channel as one line instead.
+; (The service addresses can be changed in neon.ini [web]: weather_base, define_base, translate_base.)
+
+; a framed card:  ns.card <title> <line> <line> ...   (lines separated by chr(1) in $2-)
+alias ns.card {
+  ; $1- = title chr(1) line chr(1) line ...
+  var %t = $gettok($1-,1,1), %lines = $gettok($1-,2-,1), %i = 1, %a = $ns.cc($ns.get(theme,accent,13)), %o = $ns.o, %n = $numtok(%lines,1)
+  echo -cat info $+(%a,$chr(9484),$chr(9472),$chr(9472),$chr(32),$ns.b,%t,$ns.b,$chr(32),$str($chr(9472),$max(2,$calc(34 - $len(%t)))),%o)
+  while (%i <= %n) {
+    echo -cat info $+(%a,$chr(9474),%o,$chr(32),$gettok(%lines,%i,1))
+    inc %i
+  }
+  echo -cat info $+(%a,$chr(9492),$str($chr(9472),36),%o)
+}
+; percent-encode text for a URL (UTF-8)
+alias ns.urlenc {
+  var %t = $utfencode($1-), %i = 1, %o, %c
+  while (%i <= $len(%t)) {
+    %c = $mid(%t,%i,1)
+    inc %i
+    if ($regex(ns.ue,%c,/^[A-Za-z0-9\-_.~]$/)) %o = %o $+ %c
+    else %o = %o $+ $chr(37) $+ $base($asc(%c),10,16,2)
+  }
+  return %o
+}
+; JSON string escapes -> text
+alias ns.json.unesc {
+  var %t = $1-
+  %t = $regsubex(%t,/\\u([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F])/g,$chr($base(\1,16,10)))
+  %t = $replace(%t,\",",\n,$chr(32),\/,/,\\,\)
+  return %t
+}
+; the HTTP status code of a finished $urlget transfer ($urlget().reply is the whole status line)
+alias ns.web.status return $gettok($gettok($urlget($1).reply,1,10),2,32)
+alias ns.web.read {
+  var %f = $1, %sz = $file(%f).size
+  if (!%sz) return $null
+  if (%sz > 20000) %sz = 20000
+  bread $qt(%f) 0 %sz &nsweb
+  return $bvar(&nsweb,1,%sz).text
+}
 alias weather {
   var %say = 0, %city = $1-
   if ($1 == -s) {
@@ -69,35 +114,92 @@ alias weather {
   }
   set -u30 %ns.weather.say %say
   set -u30 %ns.weather.win $active
-  if (!$urlget($+(https://wttr.in/,$replace(%city,$chr(32),+),?format=3),gf,$ns.data(weather.tmp),ns.weather.done)) ns.err could not start the request.
+  set -u30 %ns.weather.city %city
+  if (!$urlget($+($ns.get(web,weather_base,https://wttr.in/),$ns.urlenc(%city),$+(?format=,$replace(@l@7C@C@7C@t@7C@f@7C@h@7C@w,@,$chr(37)))),gf,$ns.data(weather.tmp),ns.weather.done)) ns.err could not start the request.
 }
 alias ns.weather.done {
   var %f = $urlget($1).target, %t
-  if ($urlget($1).reply != 200) && ($urlget($1).reply != $null) {
-    ns.err weather service replied $urlget($1).reply
+  if ($ns.web.status($1) != 200) {
+    ns.err the weather service answered $ns.web.status($1) $+ .
     return
   }
-  %t = $read(%f,n,1)
-  if (!%t) { ns.err no weather found. | return }
-  if (%ns.weather.say) && (%ns.weather.win) msg %ns.weather.win %t
-  else echo -cat info $ns.pfx %t
+  %t = $ns.web.read(%f)
+  %t = $gettok($remove(%t,$cr,$lf),1,10)
+  if (%t == $null) || ($numtok(%t,124) < 6) {
+    ns.err no weather found for %ns.weather.city $+ .
+    return
+  }
+  if (%ns.weather.say) && (%ns.weather.win) {
+    msg %ns.weather.win $+($gettok(%t,1,124),:,$chr(32),$gettok(%t,2,124),$chr(44),$chr(32),$gettok(%t,3,124),$chr(32),$chr(40),feels $gettok(%t,4,124),$chr(41),$chr(44),$chr(32),$gettok(%t,5,124),$chr(32),humidity,$chr(44),$chr(32),wind,$chr(32),$gettok(%t,6,124))
+    return
+  }
+  ns.card Weather - $gettok(%t,1,124) $+ $chr(1) $+ $gettok(%t,2,124) $+ $chr(1) $+ Temperature $+ $chr(58) $gettok(%t,3,124) $+ $chr(32) $+ $chr(40) $+ feels like $gettok(%t,4,124) $+ $chr(41) $+ $chr(1) $+ Humidity $+ $chr(58) $gettok(%t,5,124) $+ $chr(44) wind $gettok(%t,6,124)
 }
 alias define {
-  if (!$1) { ns.err usage: /define <word> | return }
-  set -u30 %ns.define.word $1
-  if (!$urlget($+(https://api.dictionaryapi.dev/api/v2/entries/en/,$1),gf,$ns.data(define.tmp),ns.define.done)) ns.err could not start the request.
+  var %say = 0, %w = $1
+  if ($1 == -s) {
+    %say = 1
+    %w = $2
+  }
+  if (!%w) { ns.err usage: /define [-s] <word> | return }
+  set -u30 %ns.define.word %w
+  set -u30 %ns.define.say %say
+  set -u30 %ns.define.win $active
+  if (!$urlget($+($ns.get(web,define_base,https://api.dictionaryapi.dev/api/v2/entries/en/),$ns.urlenc(%w)),gf,$ns.data(define.tmp),ns.define.done)) ns.err could not start the request.
 }
 alias ns.define.done {
-  var %f = $urlget($1).target, %t, %def, %pos
-  if (!$exists(%f)) { ns.err no definition found. | return }
-  bread $qt(%f) 0 6000 &nsdef
-  %t = $bvar(&nsdef,1,$bvar(&nsdef,0)).text
-  %pos = $regex(%t,/"partOfSpeech":"([^"]+)".*?"definition":"([^"]+)"/)
-  if (!%pos) {
+  var %f = $urlget($1).target, %t, %n, %i = 1, %lines, %pos
+  if (!$exists(%f)) || ($ns.web.status($1) != 200) { ns.err no definition found for %ns.define.word $+ . | return }
+  %t = $ns.web.read(%f)
+  %n = $regex(ns.dd,%t,/"definition":"((?:[^"\\]|\\.)*)"/g)
+  if (!%n) {
     ns.err no definition found for %ns.define.word $+ .
     return
   }
-  echo -cat info $ns.pfx $+($ns.b,%ns.define.word,$ns.b,$chr(32),$ns.ec(dim),$chr(40),$regml(1),$chr(41),$ns.o,$chr(32)) $+ $regml(2)
+  %pos = $iif($regex(ns.dp,%t,/"partOfSpeech":"([^"]+)"/),$regml(ns.dp,1))
+  if (%ns.define.say) && (%ns.define.win) {
+    msg %ns.define.win $+(%ns.define.word,$chr(32),$chr(40),%pos,$chr(41),$chr(58),$chr(32),$ns.json.unesc($regml(ns.dd,1)))
+    return
+  }
+  while (%i <= 3) && (%i <= %n) {
+    %lines = $+(%lines,$iif(%lines,$chr(1)),%i,.,$chr(32),$ns.json.unesc($regml(ns.dd,%i)))
+    inc %i
+  }
+  ns.card %ns.define.word $+ $iif(%pos,$chr(32) $+ $chr(40) $+ %pos $+ $chr(41)) $+ $chr(1) $+ %lines
+}
+; /translate [-s] <language code> <text>     e.g. /translate es good morning
+alias translate {
+  var %say = 0, %lang = $1, %text = $2-
+  if ($1 == -s) {
+    %say = 1
+    %lang = $2
+    %text = $3-
+  }
+  if (!$regex(ns.tl,%lang,/^[A-Za-z][A-Za-z]([-_][A-Za-z][A-Za-z])?$/)) || (%text == $null) {
+    ns.err usage: /translate [-s] <language code> <text>   e.g. /translate es good morning  (the text is sent to api.mymemory.translated.net)
+    return
+  }
+  set -u30 %ns.tl.say %say
+  set -u30 %ns.tl.win $active
+  set -u30 %ns.tl.lang %lang
+  set -u30 %ns.tl.text $left(%text,300)
+  if (!$urlget($+($ns.get(web,translate_base,https://api.mymemory.translated.net/get),?q=,$ns.urlenc($left(%text,300)),&langpair=Autodetect,$chr(37),7C,%lang),gf,$ns.data(translate.tmp),ns.tl.done)) ns.err could not start the request.
+}
+alias tl translate $1-
+alias ns.tl.done {
+  var %f = $urlget($1).target, %t
+  if (!$exists(%f)) || ($ns.web.status($1) != 200) { ns.err the translation service did not answer (status $ns.web.status($1) $+ ). | return }
+  %t = $ns.web.read(%f)
+  if (!$regex(ns.tr,%t,/"translatedText":"((?:[^"\\]|\\.)*)"/)) {
+    ns.err the translation service gave no result (it has a small daily limit).
+    return
+  }
+  var %r = $ns.json.unesc($regml(ns.tr,1))
+  if (%ns.tl.say) && (%ns.tl.win) {
+    msg %ns.tl.win %r
+    return
+  }
+  ns.card Translate - %ns.tl.lang $+ $chr(1) $+ %ns.tl.text $+ $chr(1) $+ $ns.b $+ %r $+ $ns.b $+ $chr(1) $+ $ns.ec(dim) $+ via MyMemory $+ $ns.o
 }
 
 ; ---------------------------------------------------------------- seen database
@@ -179,15 +281,19 @@ alias ns.bot.run {
   if (%nick == $me) return
   if ($hget(ns.botcd,$+($cid,.,%nick))) return
   tokenize 32 $3-
-  var %cmd = $lower($1)
-  if (!$findtok(!roll !8ball !coin !time !uptime !help !seen !ops !rank,%cmd,1,32)) return
+  var %cmd = $lower($1), %ext = $iif($isalias(ns.bot2.cmds) && $istok($ns.bot2.cmds,%cmd,32),1,0)
+  if (!$findtok(!roll !8ball !coin !time !uptime !help !seen !ops !rank,%cmd,1,32)) && (!%ext) return
   hadd -mu $+ $ns.get(bot,cooldown,5) ns.botcd $+($cid,.,$nick) 1
+  if (%ext) {
+    ns.bot2.run %chan %nick %cmd $2-
+    return
+  }
   if (%cmd == !roll) ns.bot.reply $chan $nick $nick $+ : $ns.roll($2)
   elseif (%cmd == !8ball) ns.bot.reply $chan $nick $nick $+ : $gettok(Yes.;No.;Maybe.;Ask again later.;Definitely.;Not a chance.;Signs point to yes.;Very doubtful.,$rand(1,8),59)
   elseif (%cmd == !coin) ns.bot.reply $chan $nick $nick $+ : $iif($rand(0,1),Heads,Tails)
   elseif (%cmd == !time) ns.bot.reply $chan $nick It is $asctime(ddd d mmm yyyy HH:nn) (bot local time).
   elseif (%cmd == !uptime) ns.bot.reply $chan $nick I have been running for $duration($uptime(mirc,3)) $+ .
-  elseif (%cmd == !help) ns.bot.reply $chan $nick Commands: !roll [NdM] !8ball !coin !time !uptime !seen <nick> !ops !rank <nick>
+  elseif (%cmd == !help) ns.bot.reply $chan $nick Commands: !roll [NdM] !8ball !coin !time !uptime !seen <nick> !ops !rank <nick> !quote !addquote !karma !top !poll !vote !results !guess !rps !hangman
   elseif (%cmd == !seen) {
     if (!$2) ns.bot.reply $chan $nick usage: !seen <nick>
     elseif ($2 == $nick) ns.bot.reply $chan $nick Looking good, $nick $+ !
