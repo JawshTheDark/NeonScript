@@ -102,6 +102,17 @@ Right-click any toolbar button for its own menu.
   The panels can only load NeonScript's own files; every other address is refused, and what a page sends back is treated as untrusted text.
 * Apart from the panels' WebView2 profile folder (`data\ui\profile`) it touches nothing but mIRC's own windows. `/neon ui off` puts everything back.
 
+## Settings sync (optional)
+
+* `/neon sync folder <path>` then `/neon sync on` (or Control Panel > Sync): NeonScript keeps your settings in step through a
+  folder that OneDrive, Dropbox, Syncthing or a git checkout already shares between your PCs. Nothing else is used.
+* It merges **key by key** against the state of the last sync, so a change on one PC survives a different change on another.
+  The same key changed on both: the newer file wins and the other copy goes to `backup\sync-conflicts`. A new PC adopts what the
+  folder already holds. A normal backup is taken before NeonScript changes anything because of the folder.
+* **Passwords, tokens and the AI key never go into the folder**; neither do machine-specific sections (paths, helper switches,
+  update checks) or logs, the mentions inbox and stats. Perform lines and custom buttons are commands - only share a folder you control.
+  Your own mSL aliases (`usercode.ini`) are synced only if you set `[sync] code=1` in `sync.ini`.
+
 ## Fun and extras
 
 * **Channel extras** (part of the channel bot - switch it on in Control Panel > Channel commands): `!addquote` / `!quote [n | words]`

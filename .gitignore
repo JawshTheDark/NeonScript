@@ -57,3 +57,5 @@ desktop.ini
 /native/*.lib
 /native/*.exp
 /data/ui/profile/
+/sync.ini
+/data/syncbase/

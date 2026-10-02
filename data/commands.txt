@@ -119,6 +119,10 @@ Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank 
 #Native helper (optional)
 /emoji|Emoji picker panel - search, groups, recent; inserts at the cursor (needs the native helper, else opens the symbol map)
 /neon ui [on|off|status]|Nick list icons, avatars and the taskbar unread badge through neonui.dll (SHA-256 verified, off by default)
+#Settings sync (optional)
+/neon sync [status]|Show the sync folder, the last run and this PC's name
+/neon sync folder [path]|Choose the folder your PCs share (a dialog opens when no path is given)
+/neon sync on|off|now|Turn sync on (asks first), off, or run it right now
 #Services
 /ns /cs /ms /hs /bs /os <text>|Message NickServ, ChanServ, MemoServ, HostServ, BotServ, OperServ
 /identify <pw>, /ghost <nick> [pw], /recover <nick>|NickServ shortcuts

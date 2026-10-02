@@ -113,7 +113,7 @@ Text leaves your PC only when you press the button, and the dialog says exactly 
 Avatars and rank icons in the nick list, rich message cards, an emoji picker and optional web-style panels
 (WebView2 ships with Windows 11). 32-bit like mIRC, hash-checked like `neonsec.dll`, off if missing.
 
-### Phase 12 - Sync
+### Phase 12 - Sync  (DONE in 2026.14.0)
 Settings sync through a folder you choose (OneDrive, Dropbox, a git checkout): encrypted secrets stay on the PC.
 
 ## Tokens: how to protect them without (probably) a DLL

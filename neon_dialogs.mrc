@@ -314,6 +314,18 @@ dialog ns_opt {
   button "Check helper", 1407, 92 184 70 12
   button "Emoji picker", 1408, 166 184 60 12
 
+  ; ---- page 14 : Sync  (ids 1500-1599)
+  box "Settings sync (optional)", 1500, 82 38 266 172
+  text "Keep your settings in step between PCs through a folder you already share: OneDrive, Dropbox, Syncthing or a git checkout. NeonScript merges changes key by key; passwords, tokens and the AI key never go into the folder.", 1501, 92 50 250 27
+  text "Sync folder:", 1502, 92 84 44 9
+  edit "", 1503, 138 82 204 11, read
+  button "Choose folder...", 1504, 92 100 70 12
+  button "Turn on", 1505, 166 100 50 12
+  button "Sync now", 1506, 220 100 50 12
+  button "Open folder", 1507, 274 100 56 12
+  text "", 1508, 92 122 250 36
+  text "Perform lines and custom buttons are commands, so share the folder only with yourself. A conflict keeps the newer value and puts the other copy in backup\sync-conflicts.", 1509, 92 160 250 27
+
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
   check "Write a debug log (neon.log)", 801, 92 52 250 9
@@ -326,7 +338,7 @@ dialog ns_opt {
   text "NeonScript keeps its settings in neon.ini inside its own folder, so the whole pack stays portable.", 816, 92 112 250 20
 }
 
-alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows ai native
+alias -l pagekeys return general connection display sounds protection away commands advanced chat privacy windows ai native sync
 
 on *:DIALOG:ns_opt:init:*:{
   did -g ns_opt 1 $ns.asset(header_options.png)
@@ -343,6 +355,7 @@ on *:DIALOG:ns_opt:init:*:{
   did -a ns_opt 2 Windows integration
   did -a ns_opt 2 AI helpers
   did -a ns_opt 2 Native UI
+  did -a ns_opt 2 Sync
   did -ra ns_opt 903 $ns.tag $+ $crlf $+ mIRC $version
   optload
   var %p = $findtok($pagekeys,%ns.optpage,1,32)
@@ -360,12 +373,13 @@ alias -l showpage {
     ns.didr -h ns_opt $+(%i,00) $+(%i,99)
     inc %i
   }
-  ns.didr -h ns_opt 1000 1499
+  ns.didr -h ns_opt 1000 1599
   if (%n == 9) ns.didr -v ns_opt 1000 1099
   elseif (%n == 10) ns.didr -v ns_opt 1100 1199
   elseif (%n == 11) ns.didr -v ns_opt 1200 1299
   elseif (%n == 12) ns.didr -v ns_opt 1300 1399
   elseif (%n == 13) ns.didr -v ns_opt 1400 1499
+  elseif (%n == 14) ns.didr -v ns_opt 1500 1599
   else ns.didr -v ns_opt $+(%n,00) $+(%n,99)
 }
 
@@ -407,6 +421,7 @@ alias -l optload {
   did $iif($donotdisturb,-c,-u) ns_opt 405
   did -ra ns_opt 1309 $iif($ns.ai.haskey,$ns.ai.mask,$null)
   did -ra ns_opt 1405 $ns.ui.statustext
+  ns.sync.refresh
 }
 alias -l optsave {
   var %n = $numtok($opt.ids,32), %i = 1, %id, %r, %sec, %it, %def, %t, %vals, %k, %line, %txt
@@ -471,6 +486,10 @@ on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
 on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
 on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
 on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
+on *:DIALOG:ns_opt:sclick:1504:{ ns.later neon sync folder | .timer.nssyncui -o 1 2 ns.sync.refresh }
+on *:DIALOG:ns_opt:sclick:1505:{ ns.later ns.sync.toggle }
+on *:DIALOG:ns_opt:sclick:1506:{ ns.later neon sync now | .timer.nssyncui -o 1 3 ns.sync.refresh }
+on *:DIALOG:ns_opt:sclick:1507:{ if ($ns.sync.dir) run explorer $qt($ns.sync.dir) }
 on *:DIALOG:ns_opt:sclick:1408:{ optsave | ns.later emoji }
 on *:DIALOG:ns_opt:sclick:1407:{ optsave | did -ra ns_opt 1405 $ns.ui.statustext }
 on *:DIALOG:ns_opt:sclick:1313:{ optsave | ns.later ai test }

@@ -2,6 +2,11 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.14.0
+
+* **Settings sync** (`/neon sync`, Control Panel > Sync): three-way, key-by-key merge of your settings through a folder you
+  choose, with conflict copies, an automatic backup before applying, first-sync adoption and no secrets in the folder.
+
 ## 2026.13.0
 
 * **Native UI helper** (`neonui.dll`, source in `native/`, off by default - Control Panel > Native UI or `/neon ui on`): rank icons

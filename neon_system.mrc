@@ -366,6 +366,11 @@ alias neon.selftest {
     else ns.st.line ok AI helpers: $ns.ai.provider at $ns.ai.host (text is sent only when you run a command, model $ns.ai.model $+ )
     if (aikey isin $ns.bak.files) ns.st.line fail the AI key file would be part of a backup
   }
+  if ($isalias(ns.sync.on)) {
+    if ($ns.sync.on) ns.st.line ok settings sync is on: $ns.sync.dir
+    elseif ($ns.sync.root != $null) && (!$ns.sync.dir) ns.st.line warn the sync folder $qt($ns.sync.root) is not reachable right now
+    else ns.st.line ok settings sync: switched off (/neon sync folder, then /neon sync on)
+  }
   if ($isalias(ns.ui.on)) {
     if (!$exists($ns.ui.dll)) ns.st.line ok native UI helper: neonui.dll is not installed (optional)
     elseif (!$ns.ui.ready) ns.st.line fail neonui.dll does not match data\neonui.sha256 - it will not be used
