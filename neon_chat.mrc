@@ -216,6 +216,8 @@ dialog ns_mi {
 }
 on *:DIALOG:ns_mi:init:*:{
   did -g ns_mi 1 $ns.asset(header_mentions.png)
+  ; the "only what I have not read yet" choice is remembered (default: on)
+  did $iif($ns.flag(chat,mi_unread,1),-c,-u) ns_mi 3
   ns.mi.fill
 }
 ; rebuild the list, newest first; ns.mil maps list line -> item key
@@ -240,7 +242,10 @@ alias ns.mi.fill {
   did -ra ns_mi 7 $iif($ns.mi.unread,$ns.mi.unread unread,all read)
   if (%shown) did -c ns_mi 2 1
 }
-on *:DIALOG:ns_mi:sclick:3:{ ns.mi.fill }
+on *:DIALOG:ns_mi:sclick:3:{
+  ns.set chat mi_unread $did(ns_mi,3).state
+  ns.mi.fill
+}
 on *:DIALOG:ns_mi:dclick:2:{ ns.mi.jumpsel }
 on *:DIALOG:ns_mi:sclick:4:{ ns.mi.jumpsel }
 on *:DIALOG:ns_mi:sclick:5:{ ns.mi.markall }
@@ -359,6 +364,7 @@ alias ns.rp.context {
 }
 ; reactions arrive as TAGMSG with +draft/react (and +draft/reply naming the message)
 raw TAGMSG:*:{
+  haltdef
   ; typing indicators (+typing=active|paused|done)
   if ($msgtags(+typing)) && ($isalias(ns.v3.typing)) {
     ns.v3.typing $1 $nick $msgtags(+typing).key

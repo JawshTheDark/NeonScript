@@ -102,12 +102,18 @@ static COLORREF HexColour(const std::wstring &s, COLORREF def)
 struct Config {
     bool rank = true;
     bool avatar = true;
+    int sizeMode = 0;       /* nick list width: 0 = leave it to mIRC, 1 = fit the longest nickname, 2 = fixed */
+    int sizeMin = 110, sizeMax = 240, sizeFixed = 150;
     bool adapt = false;     /* true: drop avatars / icons in narrow lists (windows then differ); false: same look everywhere */
     COLORREF rankCol[5] = { RGB(0xF2, 0xB8, 0x2E), RGB(0xE8, 0x6A, 0x4F), RGB(0x3F, 0xC1, 0x6B), RGB(0x2E, 0xC4, 0xB6), RGB(0x5B, 0x9B, 0xF0) };
 };
 static Config g_cfg;
 static std::map<HWND, bool> g_hooks;
+static bool g_sized = false;                           /* we have moved nick list splitters */
 static const UINT_PTR HOOK_ID = 0x4E55;     /* "NU" */
+
+static void NlApply(HWND chan, bool force);          /* nick list width, below */
+static bool NlWanted() { return g_cfg.rank || g_cfg.avatar || g_cfg.sizeMode; }
 
 static int RankIndex(wchar_t c)             /* q a o h v  ->  0..4 */
 {
@@ -311,6 +317,10 @@ static LRESULT CALLBACK ChanProc(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR id
     } else if (m == WM_NCDESTROY) {
         RemoveWindowSubclass(h, ChanProc, id);
         g_hooks.erase(h);
+    } else if (m == WM_SIZE && g_cfg.sizeMode) {
+        LRESULT r = DefSubclassProc(h, m, w, l);         /* mIRC lays the window out first, then we put our width back */
+        NlApply(h, true);
+        return r;
     }
     return DefSubclassProc(h, m, w, l);
 }
@@ -343,20 +353,232 @@ static int NickScan()
         if (!IsWindow(it->first)) it = g_hooks.erase(it);
         else ++it;
     }
-    if (g_mirc && (g_cfg.rank || g_cfg.avatar)) EnumChildWindows(g_mirc, ScanCb, 0);
+    if (g_mirc && NlWanted()) EnumChildWindows(g_mirc, ScanCb, 0);
+    if (g_cfg.sizeMode)
+        for (auto &kv : g_hooks) NlApply(kv.first, false);
     return (int)g_hooks.size();
+}
+
+static void NlRelayout(HWND chan)                      /* make mIRC lay the window out again (its own stored width) */
+{
+    RECT rc;
+    GetClientRect(chan, &rc);
+    SendMessageW(chan, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right, rc.bottom));
 }
 
 static void UnhookAll()
 {
     for (auto &kv : g_hooks) {
         if (IsWindow(kv.first)) {
+            if (g_sized) NlRelayout(kv.first);
             RemoveWindowSubclass(kv.first, ChanProc, HOOK_ID);
             HWND list = NickList(kv.first);
             if (list) InvalidateRect(list, nullptr, TRUE);
         }
     }
     g_hooks.clear();
+}
+
+/* ===================================================================================== nick list width
+ * mIRC keeps a nick list's width per channel window and only changes it when the splitter between the chat text and the list
+ * is dragged.  We do exactly what a hand does: press on the splitter, move, release (sent as mouse messages to the channel window). */
+struct NlGeo {
+    RECT client, list, text;
+    bool ok = false, onRight = true;
+};
+
+static NlGeo Geometry(HWND chan)
+{
+    NlGeo g = {};
+    HWND l = NickList(chan), t = FindWindowExW(chan, nullptr, L"Static", nullptr);
+    if (!l || !t || !IsWindowVisible(l)) return g;
+    GetClientRect(chan, &g.client);
+    GetWindowRect(l, &g.list);
+    GetWindowRect(t, &g.text);
+    MapWindowPoints(HWND_DESKTOP, chan, (POINT *)&g.list, 2);
+    MapWindowPoints(HWND_DESKTOP, chan, (POINT *)&g.text, 2);
+    g.onRight = g.list.left >= g.text.left;
+    g.ok = true;
+    return g;
+}
+
+static int NlWidthNow(HWND chan)
+{
+    NlGeo g = Geometry(chan);
+    return g.ok ? (int)(g.list.right - g.list.left) : -1;
+}
+
+/* resize the list and the chat text by hand: the list takes 'want' pixels on its side, the text window gives them up */
+static int NlSetWidth(HWND chan, int want)
+{
+    NlGeo g = Geometry(chan);
+    if (!g.ok) return -1;
+    int cur = g.list.right - g.list.left;
+    if (abs(cur - want) <= 1) return cur;
+    int minText = 120;                                          /* never squeeze the chat text below this */
+    int avail = (g.client.right - g.client.left) - minText - 8;
+    if (want > avail) want = avail;
+    if (want < 40) want = 40;
+    HWND l = NickList(chan), t = FindWindowExW(chan, nullptr, L"Static", nullptr);
+    int listH = g.list.bottom - g.list.top, textH = g.text.bottom - g.text.top;
+    int gap = g.onRight ? (g.list.left - g.text.right) : (g.text.left - g.list.right);
+    if (g.onRight) {
+        int newLeft = g.list.right - want;
+        SetWindowPos(l, nullptr, newLeft, g.list.top, want, listH, SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(t, nullptr, g.text.left, g.text.top, newLeft - gap - g.text.left, textH, SWP_NOZORDER | SWP_NOACTIVATE);
+    } else {
+        int newRight = g.list.left + want;
+        SetWindowPos(l, nullptr, g.list.left, g.list.top, want, listH, SWP_NOZORDER | SWP_NOACTIVATE);
+        SetWindowPos(t, nullptr, newRight + gap, g.text.top, g.text.right - (newRight + gap), textH, SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+    return NlWidthNow(chan);
+}
+
+struct NlCache { int count = -1, target = 0; };
+static std::map<HWND, NlCache> g_nlCache;
+
+/* how wide the list must be for its longest nickname, the icons and a scroll bar */
+static int NlMeasure(HWND list)
+{
+    int cnt = (int)SendMessageW(list, LB_GETCOUNT, 0, 0);
+    if (cnt <= 0) return 0;
+    HDC dc = GetDC(list);
+    if (!dc) return 0;
+    HFONT f = (HFONT)SendMessageW(list, WM_GETFONT, 0, 0);
+    HGDIOBJ old = f ? SelectObject(dc, f) : nullptr;
+    int best = 0;
+    wchar_t t[96];
+    for (int i = 0; i < cnt; i++) {
+        LRESULT len = SendMessageW(list, LB_GETTEXTLEN, i, 0);
+        if (len <= 0 || len >= 96) continue;
+        if (SendMessageW(list, LB_GETTEXT, i, (LPARAM)t) <= 0) continue;
+        SIZE sz;
+        if (GetTextExtentPoint32W(dc, t, (int)len, &sz) && sz.cx > best) best = sz.cx;
+    }
+    if (old) SelectObject(dc, old);
+    ReleaseDC(list, dc);
+    int rowH = (int)SendMessageW(list, LB_GETITEMHEIGHT, 0, 0);
+    if (rowH <= 0) rowH = 15;
+    RECT rc;
+    GetClientRect(list, &rc);
+    bool vscroll = (long)cnt * rowH > rc.bottom;
+    float s = (float)(rowH - 4);
+    int icons = (g_cfg.rank ? (int)(s + 3) : 0) + (g_cfg.avatar ? (int)(s + 3) : 0) + ((g_cfg.rank || g_cfg.avatar) ? 1 : 0);
+    return best + icons + 12 + (vscroll ? GetSystemMetrics(SM_CXVSCROLL) : 0);
+}
+
+/* put the nick list of one channel window at the configured width (re-measured when its number of nicknames changed) */
+static void NlApply(HWND chan, bool force)
+{
+    static bool busy = false;
+    if (!g_cfg.sizeMode || busy) return;
+    if (GetAsyncKeyState(VK_LBUTTON) & 0x8000) return;            /* never fight a drag in progress */
+    HWND l = NickList(chan);
+    if (!l || !IsWindowVisible(l)) return;
+    int target;
+    if (g_cfg.sizeMode == 2) {
+        target = g_cfg.sizeFixed;
+    } else {
+        NlCache &c = g_nlCache[chan];
+        int cnt = (int)SendMessageW(l, LB_GETCOUNT, 0, 0);
+        if (c.count != cnt || c.target <= 0) {
+            c.count = cnt;
+            c.target = NlMeasure(l);
+        }
+        target = c.target;
+        if (target <= 0) return;
+    }
+    target = max(g_cfg.sizeMin, min(g_cfg.sizeMax, target));
+    if (abs(NlWidthNow(chan) - target) <= 1) return;
+    busy = true;
+    NlSetWidth(chan, target);
+    g_sized = true;
+    busy = false;
+    (void)force;
+}
+
+static std::wstring NlInfo()
+{
+    std::wstring out;
+    for (auto &kv : g_hooks) {
+        NlGeo g = Geometry(kv.first);
+        wchar_t b[200];
+        if (!g.ok) { swprintf(b, 200, L"%p none;", (void *)kv.first); out += b; continue; }
+        swprintf(b, 200, L"%p client=%dx%d list=%d,%d,%d,%d text=%d,%d,%d,%d right=%d;", (void *)kv.first,
+                 (int)(g.client.right - g.client.left), (int)(g.client.bottom - g.client.top), (int)g.list.left, (int)g.list.top,
+                 (int)(g.list.right - g.list.left), (int)(g.list.bottom - g.list.top), (int)g.text.left, (int)g.text.top,
+                 (int)(g.text.right - g.text.left), (int)(g.text.bottom - g.text.top), g.onRight ? 1 : 0);
+        out += b;
+    }
+    return out;
+}
+
+/* ===================================================================================== menu items
+ * mIRC has no command for some of its own windows (the Favorites folder is only in the Favorites menu: Manage Favorites, Alt+J).  This presses a
+ * menu item of mIRC's menu bar by its text - only the few items NeonScript names below. */
+static bool MenuTextIs(HMENU m, int pos, const wchar_t *want)
+{
+    wchar_t buf[128];
+    int n = GetMenuStringW(m, pos, buf, 128, MF_BYPOSITION);
+    if (n <= 0) return false;
+    std::wstring t;
+    for (int i = 0; i < n && buf[i] != L'\t'; i++)
+        if (buf[i] != L'&') t += (wchar_t)towlower(buf[i]);
+    while (!t.empty() && (t.back() == L'.' || t.back() == L' ')) t.pop_back();
+    return t == want;
+}
+
+static bool FindMenuItem(HMENU m, const wchar_t *want, UINT *id, int depth)
+{
+    int n = GetMenuItemCount(m);
+    for (int i = 0; i < n; i++) {
+        HMENU sub = GetSubMenu(m, i);
+        if (sub) {
+            if (depth < 4 && FindMenuItem(sub, want, id, depth + 1)) return true;
+            continue;
+        }
+        if (MenuTextIs(m, i, want)) {
+            UINT st = GetMenuState(m, i, MF_BYPOSITION);
+            UINT mid = GetMenuItemID(m, i);
+            if (mid == (UINT)-1 || mid == 0 || (st & (MF_GRAYED | MF_DISABLED))) return false;
+            *id = mid;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* what is in mIRC's menu bar (for finding out why an item cannot be pressed) */
+static void ListMenu(HMENU m, int depth, std::wstring &out)
+{
+    int n = GetMenuItemCount(m);
+    for (int i = 0; i < n && out.size() < 3000; i++) {
+        wchar_t buf[64];
+        int len = GetMenuStringW(m, i, buf, 64, MF_BYPOSITION);
+        MENUITEMINFOW mi = { sizeof(mi) };
+        mi.fMask = MIIM_FTYPE | MIIM_ID;
+        GetMenuItemInfoW(m, i, TRUE, &mi);
+        out += std::wstring(depth * 2, L' ') + (len > 0 ? std::wstring(buf, len) : L"?") + L" [" + std::to_wstring(mi.wID) + L"/" + std::to_wstring(mi.fType) + L"];";
+        HMENU sub = GetSubMenu(m, i);
+        if (sub && depth < 2) ListMenu(sub, depth + 1, out);
+    }
+}
+
+static std::wstring PressMenu(const std::wstring &which)
+{
+    static const wchar_t *allowed[] = { L"manage favorites" };
+    std::wstring w;
+    for (wchar_t c : which) w += (wchar_t)towlower(c);
+    bool ok = false;
+    for (const wchar_t *a : allowed)
+        if (w == a) ok = true;
+    if (!ok) return L"error:not allowed";
+    HMENU bar = g_mirc ? GetMenu(g_mirc) : nullptr;
+    if (!bar) return L"error:no menu bar";
+    UINT id = 0;
+    if (!FindMenuItem(bar, w.c_str(), &id, 0)) return L"error:no such menu item";
+    PostMessageW(g_mirc, WM_COMMAND, MAKEWPARAM(id, 0), 0);
+    return L"ok";
 }
 
 /* ===================================================================================== taskbar */
@@ -884,7 +1106,20 @@ static std::wstring Run(const std::wstring &in)
         g_cfg.adapt = Opt(a, L"auto", L"0") == L"1";
         static const wchar_t *keys[5] = { L"q", L"a", L"o", L"h", L"v" };
         for (int i = 0; i < 5; i++) g_cfg.rankCol[i] = HexColour(Opt(a, keys[i]), g_cfg.rankCol[i]);
-        if (!g_cfg.rank && !g_cfg.avatar) UnhookAll();
+        {
+            std::wstring sz = Opt(a, L"size", L"off");
+            int oldMode = g_cfg.sizeMode;
+            g_cfg.sizeMode = sz == L"auto" ? 1 : (sz == L"fixed" ? 2 : 0);
+            g_cfg.sizeMin = max(60, min(400, _wtoi(Opt(a, L"min", L"110").c_str())));
+            g_cfg.sizeMax = max(g_cfg.sizeMin, min(500, _wtoi(Opt(a, L"max", L"240").c_str())));
+            g_cfg.sizeFixed = max(60, min(500, _wtoi(Opt(a, L"fixed", L"150").c_str())));
+            if (oldMode && !g_cfg.sizeMode && g_sized) {
+                for (auto &kv : g_hooks) if (IsWindow(kv.first)) NlRelayout(kv.first);     /* give mIRC's own widths back */
+                g_sized = false;
+            }
+            g_nlCache.clear();
+        }
+        if (!NlWanted()) UnhookAll();
         else { NickScan(); Repaint(); }
         return L"ok";
     }
@@ -894,6 +1129,15 @@ static std::wstring Run(const std::wstring &in)
         if (!g_thread) return L"error:not initialised";
         QueueCommand(in);
         return L"ok";
+    }
+    if (v == L"menuitem") return PressMenu(a.size() > 1 ? a[1] : L"");
+    if (v == L"menulist") { std::wstring o; HMENU bar = g_mirc ? GetMenu(g_mirc) : nullptr; if (bar) ListMenu(bar, 0, o); else o = L"no menu bar"; return o; }
+    if (v == L"nlinfo") return NlInfo();
+    if (v == L"nlwidth") {
+        int want = a.size() > 1 ? _wtoi(a[1].c_str()) : 0, n = 0;
+        std::wstring out;
+        for (auto &kv : g_hooks) { int w = NlSetWidth(kv.first, want); out += std::to_wstring(w) + L" "; n++; }
+        return out;
     }
     if (v == L"nlscan") return std::to_wstring(NickScan());
     if (v == L"nlunhook") { UnhookAll(); return L"ok"; }

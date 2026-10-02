@@ -7,11 +7,15 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1409 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1410 1411 1412 1413 1409 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1316) return ai;panel;0;c
   if (%i == 1409) return ui;nladapt;0;c
+  if (%i == 1410) return ui;nlsize;auto;s;off,auto,fixed
+  if (%i == 1411) return ui;nlmin;110;e
+  if (%i == 1412) return ui;nlmax;240;e
+  if (%i == 1413) return ui;nlfixed;150;e
   if (%i == 1401) return ui;on;0;c
   if (%i == 1402) return ui;nlrank;1;c
   if (%i == 1403) return ui;nlavatar;1;c
@@ -107,6 +111,7 @@ alias -l optnames {
   if ($1 == 302) return Unicode symbols;Windows (ANSI) symbols;ASCII only
   if ($1 == 308) return Off;[HH:nn];[HH:nn:ss];(HH:nn);HH:nn
   if ($1 == 506) return Ignore them;Kick them (if I am an op);Ignore and kick
+  if ($1 == 1410) return Leave it to mIRC;Fit the longest nickname (same in every channel);Fixed width
   if ($1 == 1303) return Ollama (a model on this PC - nothing leaves it);OpenAI or compatible service;Anthropic
   if ($1 == 316) return Glossy (default);Flat;Outline;Mono
   if ($1 == 416) return Windows sounds (default);Chime;Arcade;Soft
@@ -311,9 +316,18 @@ dialog ns_opt {
   check "Rank icons in the nick list (owner, admin, op, halfop, voice)", 1402, 108 66 234 9
   check "Coloured initials (avatars) in the nick list", 1403, 108 79 234 9
   check "Unread-mentions count on mIRC's taskbar button", 1404, 108 92 234 9
-  check "Hide them in narrow nick lists to keep names readable (otherwise every channel looks the same)", 1409, 108 105 238 9
-  text "", 1405, 92 122 250 26
-  text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 152 250 27
+  check "Hide them in narrow nick lists (otherwise every channel looks the same)", 1409, 108 102 238 9
+  text "Nick list width:", 1414, 92 118 52 9
+  combo 1410, 146 116 170 50, drop
+  text "min", 1415, 108 133 14 9
+  edit "", 1411, 124 131 24 11, limit 3
+  text "max", 1416, 154 133 14 9
+  edit "", 1412, 170 131 24 11, limit 3
+  text "fixed", 1417, 200 133 20 9
+  edit "", 1413, 222 131 24 11, limit 3
+  text "pixels - in auto mode the list is exactly as wide as the longest nickname needs, within min and max; the splitter is then managed by NeonScript", 1418, 250 129 96 27
+  text "", 1405, 92 154 250 16
+  text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 168 250 22
   button "Check helper", 1407, 92 184 70 12
   button "Emoji picker", 1408, 166 184 60 12
 

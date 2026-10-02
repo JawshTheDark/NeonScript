@@ -30,7 +30,7 @@ alias ns.ui.tab return $chr(9)
 alias ns.ui.apply {
   if (!$ns.ui.active) return
   var %t = $ns.ui.tab, %r = $ns.flag(ui,nlrank,1), %a = $ns.flag(ui,nlavatar,1)
-  var %res = $ns.ui.cmd($+(nlcfg,%t,rank=,%r,%t,avatar=,%a,%t,auto=,$ns.flag(ui,nladapt,0)))
+  var %res = $ns.ui.cmd($+(nlcfg,%t,rank=,%r,%t,avatar=,%a,%t,auto=,$ns.flag(ui,nladapt,0),%t,size=,$ns.get(ui,nlsize,auto),%t,min=,$ns.get(ui,nlmin,110),%t,max=,$ns.get(ui,nlmax,240),%t,fixed=,$ns.get(ui,nlfixed,150)))
   if (%res != ok) ns.log ui nlcfg: %res
   ns.ui.badge
   ns.ui.tick
@@ -38,7 +38,7 @@ alias ns.ui.apply {
 ; hook channel windows that appeared since the last look, refresh the badge
 alias ns.ui.tick {
   if (!$ns.ui.active) return
-  if ($ns.flag(ui,nlrank,1)) || ($ns.flag(ui,nlavatar,1)) var %n = $ns.ui.cmd($+(nlscan))
+  if ($ns.flag(ui,nlrank,1)) || ($ns.flag(ui,nlavatar,1)) || ($ns.get(ui,nlsize,auto) != off) var %n = $ns.ui.cmd($+(nlscan))
 }
 ; the number on the taskbar button
 alias ns.ui.badge {

@@ -9,6 +9,13 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
   speech, the taskbar badge, the highlight sound, "mention" rules or the mention counter, and mIRC's own highlight (colour, flash,
   sound) is bypassed - NeonScript draws those lines itself in plain style. Private messages are untouched. Works with a time limit
   and "only this network" like other entries.
+* **Auto nick list width** (Control Panel > Native UI > Nick list width): "Fit the longest nickname" sizes every channel's nick list to exactly what
+  its longest name, the icons and the scroll bar need (between a min and a max you choose), or "Fixed width" for all of them; it follows joins,
+  parts and window resizes. Default: fit. "Leave it to mIRC" gives mIRC's own widths back.
+* **No more status-window spam**: lag is now measured with a probe whose reply NeonScript can hide (the old PING came back as "PONG from ..." lines
+  that no script event can suppress), and the IRCv3 raw lines NeonScript handles (read markers, accounts, tags, deletions) are never printed.
+  The toolbar Favorites button no longer sends an unknown "FAVORITES" command to the server: it presses Favorites > Manage Favorites (needs the
+  native helper; otherwise it says Alt+J). The Mentions window remembers "Only show what I have not read yet".
 * **Native helper**: every channel's nick list now looks the same - the icons and avatars are no longer dropped in narrow lists (that
   made some channels show both, some only rank icons and some none). Control Panel > Native UI has "Hide them in narrow nick lists" if you
   prefer readable names over a uniform look (it is off by default).

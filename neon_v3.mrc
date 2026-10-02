@@ -33,7 +33,10 @@ alias ns.v3.ask {
   .raw CAP LS 302
 }
 ; raw CAP lines:  <nick|*> LS [*] :caps...    ACK :caps    NEW :caps    DEL :caps
-raw CAP:*:{ ns.v3.cap $1- }
+raw CAP:*:{
+  ns.v3.cap $1-
+  halt
+}
 alias ns.v3.cap {
   var %sub = $upper($2), %txt = $3-, %i = 1, %adv, %c, %req, %n
   if ($left(%txt,1) == $chr(42)) %txt = $gettok(%txt,2-,32)
@@ -115,6 +118,7 @@ alias ns.rm.sync {
   }
 }
 raw MARKREAD:*:{
+  haltdef
   if (!$ns.v3.on) return
   var %t = $1, %ts = $2, %c = 0
   if ($left(%ts,10) == timestamp=) %c = $ns.v3.iso2ctime($mid(%ts,11))
@@ -158,6 +162,7 @@ alias ns.v3.typing {
 ; ---------------------------------------------------------------- redaction and edits
 ; REDACT <target> <msgid> [:reason]    - the server (or the author) deleted a message
 raw REDACT:*:{
+  haltdef
   if (!$ns.v3.on) || (!$ns.flag(v3,redact,1)) return
   var %t = $1, %id = $2, %why = $3-, %orig = $hget(ns.mid,$+($cid,.,%id)), %who = $gettok(%orig,1,9), %what = $gettok(%orig,2-,9), %w
   %w = $iif($ns.ischan(%t),%t,$iif($query($nick),$nick,%t))
@@ -179,6 +184,7 @@ alias ns.v3.edit {
 ; ---------------------------------------------------------------- account names
 ; account-notify: ACCOUNT <name|*>      extended-join: JOIN <#chan> <account|*> :<realname>
 raw ACCOUNT:*:{
+  haltdef
   if (!$ns.v3.on) return
   if ($1 == $chr(42)) hdel ns.acct $+($cid,.,$nick)
   else hadd -m ns.acct $+($cid,.,$nick) $1

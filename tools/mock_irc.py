@@ -453,6 +453,8 @@ class Client:
                     self.send(f":lurker.bouncer BOUNCER NETWORK {i} name={name};state=connected")
             else:
                 self.send(f":lurker.bouncer FAIL BOUNCER NEED_CAP :soju.im/bouncer-networks not negotiated")
+        elif cmd.startswith("NSLAG") or cmd == "FAVORITES":
+            self.send(f":{SRV} 421 {self.nick} {parts[0]} :Unknown command")
         elif cmd == "QUIT":
             self.send(f"ERROR :Closing Link: 127.0.0.1 (Client Quit)")
             return False

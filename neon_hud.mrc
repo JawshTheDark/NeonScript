@@ -11,14 +11,17 @@
 alias ns.lag.ping {
   var %i = $scon(0)
   while (%i) {
-    scid $scon(%i) if ($status == connected) raw -q PING $+(:nslag,$ticks)
+    scid $scon(%i) if ($status == connected) raw -q $+(NSLAG,$ticks)
     dec %i
   }
 }
-raw PONG:*nslag*:{
-  var %t = $remove($gettok($1-,-1,32),:)
-  if ($left(%t,5) != nslag) return
+; The reply to an unknown command (numeric 421, "<me> NSLAG<ticks> :Unknown command") tells us the round trip.  A PING would be
+; answered with a PONG that mIRC prints in the status window and that no script event can catch - this way nothing is shown.
+raw 421:*NSLAG*:{
+  var %t = $2
+  if ($left(%t,5) != NSLAG) return
   hadd -m ns.lag $cid $calc($ticks - $mid(%t,6))
+  haltdef
   halt
 }
 ; $ns.lag -> "42 ms" or "-" for the active connection

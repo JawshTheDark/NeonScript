@@ -243,6 +243,15 @@ on *:SIGNAL:ns.uninstall:{ toolbar -r }
 on *:LOAD:{ .timer.nstbinit -o 1 1 ns.tb.init }
 
 ; ---------------------------------------------------------------- button actions
+; mIRC has no /favorites command (a plain "/favorites" is sent to the server, which answers "Unknown command"): its Favorites
+; folder is Tools > Favorites (Alt+J).  With the native helper on we press that menu item; otherwise we say how to open it.
+alias favorites {
+  if ($isalias(ns.ui.active)) && ($ns.ui.active) {
+    var %r = $ns.ui.cmd($+(menuitem,$chr(9),Manage Favorites))
+    if (%r == ok) return
+  }
+  ns.say mIRC's Favorites folder opens with Alt+J (Favorites > Manage Favorites). With the native helper running this button opens it for you - if it is on and you still see this, run /neon ui off then /neon ui on.
+}
 alias ns.tb.click {
   var %n = $right($1,-3)
   if ($ns.cb.exists(%n)) { ns.cb.run %n | return }
