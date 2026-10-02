@@ -12,6 +12,8 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 * **Auto nick list width** (Control Panel > Native UI > Nick list width): "Fit the longest nickname" sizes every channel's nick list to exactly what
   its longest name, the icons and the scroll bar need (between a min and a max you choose), or "Fixed width" for all of them; it follows joins,
   parts and window resizes. Default: fit. "Leave it to mIRC" gives mIRC's own widths back.
+* **MTS themes with `!script` templates** (e.g. negative-entropy, whose lines are produced by its own script) no longer print the code
+  (`!script $ct.outtext(...)`) in every window: those templates are skipped and NeonScript's built-in style draws the line.
 * **No more status-window spam**: lag is now measured with a probe whose reply NeonScript can hide (the old PING came back as "PONG from ..." lines
   that no script event can suppress), and the IRCv3 raw lines NeonScript handles (read markers, accounts, tags, deletions) are never printed.
   The toolbar Favorites button no longer sends an unknown "FAVORITES" command to the server: it presses Favorites > Manage Favorites (needs the

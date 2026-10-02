@@ -70,6 +70,9 @@ alias ns.mts.load {
     %k = $lower($left(%l,$calc(%p - 1)))
     %v = $mid(%l,$calc(%p + 1))
     if (%k == $null) continue
+    ; "!script ..." templates are code that belongs to the original theme's own script - NeonScript does not run them, so the
+    ; line is left to its built-in style instead of printing the code
+    if ($left($ns.trim(%v),7) == !script) continue
     hadd ns.mts %k %v
   }
   hadd ns.mts __file $1
