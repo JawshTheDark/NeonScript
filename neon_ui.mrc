@@ -30,7 +30,7 @@ alias ns.ui.tab return $chr(9)
 alias ns.ui.apply {
   if (!$ns.ui.active) return
   var %t = $ns.ui.tab, %r = $ns.flag(ui,nlrank,1), %a = $ns.flag(ui,nlavatar,1)
-  var %res = $ns.ui.cmd($+(nlcfg,%t,rank=,%r,%t,avatar=,%a))
+  var %res = $ns.ui.cmd($+(nlcfg,%t,rank=,%r,%t,avatar=,%a,%t,auto=,$ns.flag(ui,nladapt,0)))
   if (%res != ok) ns.log ui nlcfg: %res
   ns.ui.badge
   ns.ui.tick
@@ -69,10 +69,25 @@ alias ns.ui.start {
   ns.ui.apply
   .timer.nsui 0 2 ns.ui.tick
 }
-on *:SIGNAL:ns.boot:{ .timer.nsuiboot -o 1 3 ns.ui.refresh }
+on *:SIGNAL:ns.boot:{ .timer.nsuiboot -o 1 3 ns.ui.refresh | .timer.nsuiclean -o 1 20 ns.ui.cleanup }
 on *:SIGNAL:ns.opts:{ .timer.nsuiboot -o 1 1 ns.ui.refresh }
 on *:SIGNAL:ns.uninstall:{ ns.ui.stop | if ($exists($ns.ui.dll)) .dll -u $qt($ns.ui.dll) }
 on *:EXIT:{ if ($hget(ns.uis,ok) == 1) ns.ui.stop }
+; let go of neonui.dll (it can then be replaced) and forget that it was verified
+alias ns.ui.unload {
+  if ($exists($ns.ui.dll)) .dll -u $qt($ns.ui.dll)
+  if ($hget(ns.uis)) hdel -w ns.uis ok
+  if ($hget(ns.uis)) hdel -w ns.uis wv*
+  if ($hget(ns.uis)) hdel -w ns.uis badge
+}
+; leftovers of a replaced neonui.dll (renamed while it was loaded)
+alias ns.ui.cleanup {
+  var %n = $findfile($scriptdir,neonui.*.old,0,0), %i = 1
+  while (%i <= %n) {
+    .remove $qt($findfile($scriptdir,neonui.*.old,%i,0))
+    inc %i
+  }
+}
 alias ns.ui.refresh {
   if ($ns.ui.active) ns.ui.start
   else ns.ui.stop
@@ -100,7 +115,8 @@ alias neon.ui {
   if (%c == off) {
     ns.set ui on 0
     ns.ui.refresh
-    ns.say native UI helper off.
+    ns.ui.unload
+    ns.say native UI helper off (neonui.dll unloaded).
     return
   }
   ns.say native UI helper: $iif($ns.ui.on,$+($ns.ec(join),ON,$ns.o),$+($ns.ec(kick),off,$ns.o))

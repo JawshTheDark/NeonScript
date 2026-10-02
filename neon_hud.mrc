@@ -43,7 +43,7 @@ alias ns.stat.tick {
 on *:TEXT:*:*:{
   ns.stat.inc msg m
   if ($chan == $null) ns.stat.inc pm
-  elseif ($me isin $1-) ns.stat.inc hl
+  elseif ($me isin $1-) && (!$ns.hl.muted($fulladdress)) ns.stat.inc hl
 }
 on *:ACTION:*:*:{ ns.stat.inc msg m }
 on *:INPUT:*:{

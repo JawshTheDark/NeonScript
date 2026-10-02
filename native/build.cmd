@@ -43,7 +43,14 @@ cl /nologo /LD /O2 /MT /EHsc /std:c++17 /W3 /DUNICODE /D_UNICODE /DWIN32_LEAN_AN
 if errorlevel 1 ( popd & exit /b 1 )
 del /q neonui.obj neonui.lib neonui.exp >nul 2>&1
 
-copy /y neonui.dll "%ROOT%\neonui.dll" >nul
+copy /y neonui.dll "%ROOT%\neonui.dll" >nul 2>&1
+if errorlevel 1 (
+  rem a copy of mIRC that has the old neonui.dll loaded keeps it locked: it can still be renamed out of the way
+  ren "%ROOT%\neonui.dll" "neonui.%RANDOM%.old" >nul 2>&1
+  copy /y neonui.dll "%ROOT%\neonui.dll" >nul
+  if errorlevel 1 ( echo Could not replace neonui.dll - unload it in mIRC first: /neon ui off & popd & exit /b 1 )
+  echo Note: the old neonui.dll was in use and was renamed to neonui.*.old - /neon ui off then /neon ui on loads the new one.
+)
 del /q neonui.dll >nul 2>&1
 set "SUM="
 for /f "skip=1 delims=" %%h in ('certutil -hashfile "%ROOT%\neonui.dll" SHA256') do (

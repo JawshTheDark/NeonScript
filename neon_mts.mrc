@@ -313,7 +313,8 @@ alias ns.mts.raw {
 }
 
 ; ---------------------------------------------------------------- chat lines (opt-in)
-alias -l mts.chaton return $iif($ns.flag(mts,chatactive,0),$iif($ns.get(events,style,modern) == mts,1,0),0)
+alias -l mts.chaton return $ns.mts.chatactive
+alias ns.mts.chatactive return $iif($ns.flag(mts,chatactive,0),$iif($ns.get(events,style,modern) == mts,1,0),0)
 alias -l mts.chatvars {
   if ($hget(ns.evv)) hdel -w ns.evv *
   hadd -m ns.evv nick $nick
@@ -331,7 +332,9 @@ alias -l mts.chatshow {
   var %tpl = $hget(ns.mts,$1)
   if (%tpl == $null) return 0
   hadd -m ns.evv __tpl %tpl
-  echo -cmlbfti2 normal $2 $ns.mts.expand
+  ; a person on the "highlights only" list is shown without mIRC's highlight, flash and beep (channel lines only)
+  if ($chan) && ($isalias(ns.hl.muted)) && ($ns.hl.muted($fulladdress)) echo -cmti2 normal $2 $ns.mts.expand
+  else echo -cmlbfti2 normal $2 $ns.mts.expand
   return 1
 }
 on ^*:TEXT:*:#:{

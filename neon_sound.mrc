@@ -57,8 +57,8 @@ alias ns.snd {
 }
 on *:CONNECT:{ ns.snd connect }
 on *:DISCONNECT:{ ns.snd disconnect }
-on *:TEXT:*:#:{ if ($me isin $1-) ns.snd highlight }
-on *:ACTION:*:#:{ if ($me isin $1-) ns.snd highlight }
+on *:TEXT:*:#:{ if ($me isin $1-) && (!$ns.hl.muted($fulladdress)) ns.snd highlight }
+on *:ACTION:*:#:{ if ($me isin $1-) && (!$ns.hl.muted($fulladdress)) ns.snd highlight }
 on *:TEXT:*:?:{ ns.snd pm }
 on *:INVITE:*:{ ns.snd invite }
 on *:KICK:#:{ if ($knick == $me) ns.snd kick }

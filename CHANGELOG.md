@@ -2,6 +2,21 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.16.0
+
+* **Highlights-only ignore** (Ignore Manager: "Only stop them highlighting me", `/neon nohl <nick>`, nick-list menu "Never highlight me"):
+  a person or bot you keep reading but who must not highlight you. Their channel lines never reach the mentions inbox, toasts,
+  speech, the taskbar badge, the highlight sound, "mention" rules or the mention counter, and mIRC's own highlight (colour, flash,
+  sound) is bypassed - NeonScript draws those lines itself in plain style. Private messages are untouched. Works with a time limit
+  and "only this network" like other entries.
+* **Native helper**: every channel's nick list now looks the same - the icons and avatars are no longer dropped in narrow lists (that
+  made some channels show both, some only rank icons and some none). Control Panel > Native UI has "Hide them in narrow nick lists" if you
+  prefer readable names over a uniform look (it is off by default).
+* **Native helper**: the nick list icon cell no longer turns into a block of the nick's colour on rows whose name runs to the edge of a narrow
+  list (the row background is now the majority of ten samples along the row's top and bottom edge instead of one pixel);
+  icons are kept on narrower lists, so windows look alike. `/neon ui off` now unloads `neonui.dll`, and a replaced DLL is
+  renamed out of the way when the old one is still loaded (`/neon ui off` then `on` picks up the new one).
+
 ## 2026.15.0
 
 * **Dictation** (`/dictate`, `/neon dictate`): speech to text through the Windows speech recogniser, text lands in the editbox, never

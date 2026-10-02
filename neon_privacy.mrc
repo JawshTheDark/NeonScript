@@ -86,11 +86,13 @@ alias ns.ig.add {
   ns.ig.set %id note $5-
   ns.ig.set %id added $ctime
   ns.ig.push %id
+  ns.hl.rebuild
   return %id
 }
 alias ns.ig.del {
   ns.ig.pull $1
   remini $qt($ns.ig.ini) $1
+  ns.hl.rebuild
 }
 ; re-apply everything (after mIRC starts, and for a network's own entries when it connects)
 alias ns.ig.sync {
@@ -117,7 +119,81 @@ alias ns.ig.tick {
     if ($ns.ig.left(%id) == 0) ns.ig.del %id
   }
 }
+; ============================================================================
+;  "HIGHLIGHTS ONLY" ENTRIES  (type h)
+;  A person or bot whose lines you want to keep reading but who must never highlight you (a game bot that says your nick with
+;  every score, say).  Entries whose types contain h are not given to mIRC's /ignore - the lines are shown as usual, but
+;    * they never reach the mentions inbox, toasts, speech, the taskbar badge, the highlight sound or the "mention" rules
+;    * mIRC's own highlight (colour, flash, sound) is bypassed: NeonScript draws the line itself, in plain style, without it
+;  Private messages and everything else from them are untouched.
+; ============================================================================
+; is this address (nick!user@host) covered by a highlights-only entry that applies here and has not expired?
+alias ns.hl.muted {
+  if (!%ns.hl.any) return 0
+  var %a = $1, %i = 1, %id, %m
+  if (%a == $null) return 0
+  if (!$pos(%a,!)) %a = $+(%a,!*@*)
+  while ($gettok(%ns.hl.ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    if ($ns.ig.left(%id) == 0) continue
+    if ($ns.ig.get(%id,scope) == net) && ($ns.ig.get(%id,net) != $ns.ig.net) continue
+    %m = $ns.ig.get(%id,mask)
+    if (%m != $null) && (%m iswm %a) return 1
+  }
+  return 0
+}
+; remember which entries are highlights-only, so the check costs nothing when there are none
+alias ns.hl.rebuild {
+  var %i = 1, %id, %o
+  while ($gettok($ns.ig.ids,%i,32) != $null) {
+    %id = $v1
+    inc %i
+    if ($pos($ns.ig.get(%id,types),h)) %o = %o %id
+  }
+  set %ns.hl.ids $ns.trim(%o)
+  set %ns.hl.any $iif(%o != $null,1,0)
+}
+; draw a channel line without mIRC's highlight:  ns.hl.show <c|a> <chan> <nick> <text...>
+alias ns.hl.show {
+  var %k = $1, %w = $2, %nk = $3, %t = $4-, %pre = $left($nick(%w,%nk).pnick,1)
+  if (%pre != $null) && (!$pos($ns.rk.chars,%pre)) %pre = $null
+  if (%k == a) echo -cmti2 action %w * %nk %t
+  else echo -cmti2 normal %w $+($chr(60),%pre,%nk,$chr(62)) %t
+}
+alias ns.hl.take {
+  ; the handlers below call this; 1 when the line was drawn here
+  if (!%ns.hl.any) return 0
+  if ($nick == $me) return 0
+  if ($isalias(ns.bnc.skipping)) && ($ns.bnc.skipping($nick,$md5($2-))) return 0
+  if (!$ns.hl.muted($fulladdress)) return 0
+  if ($isalias(ns.mts.chatactive)) && ($ns.mts.chatactive) return 0
+  ns.hl.show $1 $chan $nick $2-
+  return 1
+}
+on ^*:TEXT:*:#:{ if ($ns.hl.take(c,$1-)) haltdef }
+on ^*:ACTION:*:#:{ if ($ns.hl.take(a,$1-)) haltdef }
+
+; /neon nohl <nick|mask> [10m|2h|1d] [note]     stop them from highlighting me (their lines are still shown)
+alias nohl neon.nohl $1-
+alias neon.nohl {
+  var %t = $1, %secs = 0, %note, %m
+  if (%t == $null) {
+    ns.err usage: /neon nohl <nick|mask> [10m|2h|1d] [note]   (undo with /neon unignore <nick>)
+    return
+  }
+  if ($2 != $null) && ($ns.ig.secs($2) > 0) {
+    %secs = $ns.ig.secs($2)
+    %note = $3-
+  }
+  else %note = $2-
+  %m = $ns.ig.maskfor(%t)
+  ns.ig.add %m h all %secs %note
+  ns.say $+($ns.b,%m,$ns.b) $+ $chr(32) will no longer highlight you $+ $iif(%secs > 0,$chr(32) $+ for $ns.mod.dur(%secs)) $+ $chr(46) Their lines are still shown. /neon ignores manages the list.
+}
+
 on *:SIGNAL:ns.boot:{
+  ns.hl.rebuild
   .timer.nsigb -o 1 4 ns.ig.sync
   .timer.nsigt 0 60 ns.ig.tick
 }
@@ -179,12 +255,12 @@ alias neon.unignore {
     }
   }
   if (!%n) .ignore -rw %m
-  ns.say no longer ignoring $+($ns.b,%m,$ns.b) $+ .
+  ns.say no longer ignoring or muting $+($ns.b,%m,$ns.b) $+ .
 }
 
 dialog ns_ign {
   title "Ignore Manager"
-  size -1 -1 336 228
+  size -1 -1 336 244
   option dbu
   icon 1, 0 0 336 30, $mircexe, 0, noborder
   list 2, 6 36 324 90, size vsbar hsbar
@@ -196,19 +272,20 @@ dialog ns_ign {
   text "10m, 2h, 1d - empty = for good", 8, 252 144 80 18
   text "Note:", 9, 6 160 22 9
   edit "", 10, 30 158 218 11, autohs
-  text "Ignore:", 11, 6 176 26 9
-  check "Private", 12, 34 175 38 9
-  check "Channel", 13, 76 175 40 9
-  check "Notices", 14, 120 175 38 9
-  check "CTCP", 15, 162 175 32 9
-  check "Invites", 16, 198 175 36 9
-  text "Where:", 17, 6 192 26 9
-  combo 18, 34 190 120 50, drop
-  button "Add", 19, 160 189 40 12
-  button "Update", 20, 204 189 40 12
-  button "Remove", 21, 248 189 40 12
-  button "Adopt mIRC's list", 22, 6 208 78 13
-  button "Close", 23, 282 208 48 13, ok cancel
+  check "Only stop them highlighting me - their lines are still shown (a game bot, say)", 24, 6 174 324 9
+  text "Ignore:", 11, 6 190 26 9
+  check "Private", 12, 34 189 38 9
+  check "Channel", 13, 76 189 40 9
+  check "Notices", 14, 120 189 38 9
+  check "CTCP", 15, 162 189 32 9
+  check "Invites", 16, 198 189 36 9
+  text "Where:", 17, 6 206 26 9
+  combo 18, 34 204 120 50, drop
+  button "Add", 19, 160 203 40 12
+  button "Update", 20, 204 203 40 12
+  button "Remove", 21, 248 203 40 12
+  button "Adopt mIRC's list", 22, 6 224 78 13
+  button "Close", 23, 282 224 48 13, ok cancel
 }
 on *:DIALOG:ns_ign:init:*:{
   did -g ns_ign 1 $ns.asset(header_ignore.png)
@@ -223,6 +300,7 @@ on *:DIALOG:ns_ign:init:*:{
   igfill
 }
 alias -l igtypes {
+  if ($did(ns_ign,24).state) return h
   return $+($iif($did(ns_ign,12).state,p),$iif($did(ns_ign,13).state,c),$iif($did(ns_ign,14).state,n),$iif($did(ns_ign,15).state,t),$iif($did(ns_ign,16).state,i))
 }
 alias -l igfill {
@@ -231,7 +309,7 @@ alias -l igfill {
   while ($gettok($ns.ig.ids,%i,32) != $null) {
     %id = $v1
     inc %i
-    did -a ns_ign 2 $+($ns.ig.get(%id,mask),$chr(32),$chr(32),$chr(91),$ns.ig.get(%id,types),$chr(93),$chr(32),$chr(32),$iif($ns.ig.get(%id,scope) == all,everywhere,only $ns.ig.get(%id,net)),$chr(32),$chr(32),$ns.ig.left.text(%id),$iif($ns.ig.get(%id,note) != $null,$chr(32) $+ $chr(32) $+ - $ns.ig.get(%id,note)))
+    did -a ns_ign 2 $+($ns.ig.get(%id,mask),$chr(32),$chr(32),$chr(91),$iif($ns.ig.get(%id,types) == h,highlights only,$ns.ig.get(%id,types)),$chr(93),$chr(32),$chr(32),$iif($ns.ig.get(%id,scope) == all,everywhere,only $ns.ig.get(%id,net)),$chr(32),$chr(32),$ns.ig.left.text(%id),$iif($ns.ig.get(%id,note) != $null,$chr(32) $+ $chr(32) $+ - $ns.ig.get(%id,note)))
   }
   %n = $ignore(0)
   did -ra ns_ign 3 $numtok($ns.ig.ids,32) entries here $+ $iif(%n > 0,$chr(59) mIRC's own list also has %n - press Adopt to bring them in) $+ $chr(46)
@@ -243,6 +321,8 @@ alias -l igpick {
   did -ra ns_ign 5 $ns.ig.get(%id,mask)
   did -ra ns_ign 10 $ns.ig.get(%id,note)
   did -r ns_ign 7
+  did $iif(%t == h,-c,-u) ns_ign 24
+  did $iif(%t == h,-b,-e) ns_ign 12,13,14,15,16
   did $iif($pos(%t,p),-c,-u) ns_ign 12
   did $iif($pos(%t,c),-c,-u) ns_ign 13
   did $iif($pos(%t,n),-c,-u) ns_ign 14
@@ -251,6 +331,7 @@ alias -l igpick {
   did -c ns_ign 18 $iif($ns.ig.get(%id,scope) == all,1,2)
 }
 on *:DIALOG:ns_ign:sclick:2:{ igpick $did(ns_ign,2).sel }
+on *:DIALOG:ns_ign:sclick:24:{ did $iif($did(ns_ign,24).state,-b,-e) ns_ign 12,13,14,15,16 }
 on *:DIALOG:ns_ign:sclick:19:{
   var %m = $ns.ig.maskfor($did(ns_ign,5).text), %secs = $ns.ig.secs($did(ns_ign,7).text), %t = $igtypes
   if ($did(ns_ign,5).text == $null) {
@@ -262,7 +343,7 @@ on *:DIALOG:ns_ign:sclick:19:{
     return
   }
   if (%t == $null) {
-    did -ra ns_ign 3 Tick at least one kind of message to ignore.
+    did -ra ns_ign 3 Tick at least one kind of message to ignore (or "only stop them highlighting me").
     return
   }
   ns.ig.add %m %t $iif($did(ns_ign,18).sel == 1,all,net) %secs $did(ns_ign,10).text
@@ -286,6 +367,7 @@ on *:DIALOG:ns_ign:sclick:20:{
   ns.ig.set %id note $did(ns_ign,10).text
   if ($did(ns_ign,7).text != $null) ns.ig.set %id until $iif(%secs > 0,$calc($ctime + %secs),0)
   ns.ig.push %id
+  ns.hl.rebuild
   igfill
 }
 on *:DIALOG:ns_ign:sclick:21:{
@@ -322,6 +404,7 @@ on *:DIALOG:ns_ign:sclick:22:{
     inc %new
   }
   did -ra ns_ign 3 Adopted %new entr $+ $iif(%new == 1,y,ies) $+ $chr(46) Give them a note or a time with Update.
+  ns.hl.rebuild
   igfill
 }
 

@@ -435,6 +435,7 @@ menu nicklist {
   Ignore
   .For an hour:ign $$1
   .Until I stop it:neon ignore $$1
+  .Never highlight me (still show them):neon nohl $$1
   .Stop ignoring:unign $$1
   .Ignore manager...:neon ignores
 }

@@ -107,6 +107,8 @@ alias ns.mi.msg {
   if (!$ns.flag(chat,mentions,1)) return
   if (%nick == $me) return
   if ($isalias(ns.bnc.q)) && ($ns.bnc.q) return
+  ; a "highlights only" entry (Ignore Manager): their channel lines never count as mentions
+  if (%kind isin ca) && ($isalias(ns.hl.muted)) && ($ns.hl.muted($fulladdress)) return
   if (%kind isin pq) {
     if (!$ns.flag(chat,mpm,1)) return
   }

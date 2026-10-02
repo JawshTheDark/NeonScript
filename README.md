@@ -6,8 +6,10 @@ restyled events with **all five channel ranks** (`~` owner, `&` admin, `@` op, `
 MTS theme support, a Channel Control module that replaces mIRC's Channel Central, and
 Lurker / ZNC / soju bouncer support.
 
-Pure mSL. One small, optional helper DLL (see *Security*) protects saved passwords; nothing else
-needs anything outside mIRC.
+Pure mSL at its core. Two small **optional** helper DLLs, both with their source in the pack and both
+SHA-256-checked before they are ever loaded: `neonsec.dll` (protects saved passwords, see *Security*) and
+`neonui.dll` (nick list icons, taskbar badge, HTML panels - off until you switch it on). Windows features such as
+notifications, speech and dictation use a small hidden PowerShell helper. Everything works without any of them.
 
 Licence: MIT (see `LICENSE`). Changes: `CHANGELOG.md`.
 
@@ -206,6 +208,8 @@ Right-click any toolbar button for its own menu.
 * **Ignore manager** (`/neon ignores`, `/neon ignore <nick> [2h] [note]`) - who, which kinds of message, for how
   long, where (all networks or just one), with a note. mIRC's own ignore list does the actual ignoring; NeonScript
   re-applies your entries after a restart.
+  **Highlights only**: tick "Only stop them highlighting me" (or `/neon nohl <nick>`) for a bot you want to keep reading -
+  its lines stay visible but never highlight you (no mention, toast, sound, badge or mIRC highlight; private messages are unaffected).
 * **CTCP privacy** (Control Panel > Privacy & safety) - FINGER, USERINFO, CLIENTINFO and the like are not answered, TIME
   is answered in UTC, only people who share a channel with you get replies, nothing is answered to a whole channel, and
   a per-minute limit. (mIRC always answers VERSION itself - no script can stop that.)

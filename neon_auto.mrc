@@ -99,7 +99,7 @@ on *:TEXT:*:#:{
     ns.auto.begin text $chan $nick $1-
     ns.auto.go
   }
-  if ($ns.auto.has(mention)) && ($ns.mi.hit($1-)) {
+  if ($ns.auto.has(mention)) && ($ns.mi.hit($1-)) && (!$ns.hl.muted($fulladdress)) {
     ns.auto.begin mention $chan $nick $1-
     ns.auto.go
   }

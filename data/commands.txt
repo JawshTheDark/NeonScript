@@ -26,6 +26,7 @@
 #Privacy
 /neon ignores|Ignore manager: who, what kind of message, for how long, where, with a note - mIRC's own ignore list does the work
 /neon ignore <nick|mask> [10m|2h|1d] [note]|Ignore someone (everything, all networks), optionally for a while
+/neon nohl <nick|mask> [10m|2h|1d] [note]|Only stop them highlighting you (a game bot): their lines are still shown, but no mention, toast, sound or mIRC highlight
 /neon unignore <nick|mask>|Stop ignoring them
 /neon privacy|Privacy settings: CTCP replies (VERSION, TIME, FINGER ...), staff log and stats switches
 #Reading

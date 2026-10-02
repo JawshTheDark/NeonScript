@@ -102,6 +102,7 @@ static COLORREF HexColour(const std::wstring &s, COLORREF def)
 struct Config {
     bool rank = true;
     bool avatar = true;
+    bool adapt = false;     /* true: drop avatars / icons in narrow lists (windows then differ); false: same look everywhere */
     COLORREF rankCol[5] = { RGB(0xF2, 0xB8, 0x2E), RGB(0xE8, 0x6A, 0x4F), RGB(0x3F, 0xC1, 0x6B), RGB(0x2E, 0xC4, 0xB6), RGB(0x5B, 0x9B, 0xF0) };
 };
 static Config g_cfg;
@@ -190,6 +191,31 @@ static void Avatar(Gdiplus::Graphics &g, const wchar_t *nick, float x, float y, 
     g.DrawString(ch, 1, &font, rc, &sf, &white);
 }
 
+/* The row's own background colour, read from what mIRC just painted.  A single pixel is not safe - a long nick runs to the
+ * edge and the sample lands on a letter (the icon cell then turned into a block of the nick's colour) - so take ten samples
+ * along the top and bottom edge of the row, where text does not reach, and use the colour that occurs most often. */
+static COLORREF RowBackground(HDC mem, int w, int h)
+{
+    COLORREF c[10];
+    int n = 0;
+    if (w < 6 || h < 3) return GetSysColor(COLOR_WINDOW);
+    const int xs[5] = { 0, w / 4, w / 2, (3 * w) / 4, w - 1 };
+    for (int row = 0; row < 2; row++)
+        for (int i = 0; i < 5; i++) {
+            COLORREF p = GetPixel(mem, xs[i], row ? h - 1 : 0);
+            if (p != CLR_INVALID) c[n++] = p;
+        }
+    if (!n) return GetSysColor(COLOR_WINDOW);
+    int best = 0, bestCount = 0;
+    for (int i = 0; i < n; i++) {
+        int cnt = 0;
+        for (int j = 0; j < n; j++)
+            if (c[j] == c[i]) cnt++;
+        if (cnt > bestCount) { best = i; bestCount = cnt; }
+    }
+    return c[best];
+}
+
 /* paint one nick list row: mIRC draws it narrower into memory, we copy it right and paint the icons on the left */
 static bool DrawNick(HWND chan, WPARAM wp, DRAWITEMSTRUCT *d)
 {
@@ -197,19 +223,24 @@ static bool DrawNick(HWND chan, WPARAM wp, DRAWITEMSTRUCT *d)
     if (d->CtlType != ODT_LISTBOX || (int)d->itemID < 0) return false;
     RECT rc = d->rcItem;
     int W = rc.right - rc.left, H = rc.bottom - rc.top;
-    if (H < 11 || W < 60) return false;
+    if (H < 11 || W < 48) return false;
     float s = (float)(H - 4);                           /* icon size follows the row height */
     bool wantRank = g_cfg.rank, wantAv = g_cfg.avatar;
-    /* a narrow nick list keeps room for the names: drop the avatars first, then the rank icons */
-    if (wantRank && wantAv && W < (int)(2 * (s + 3)) + 60) wantAv = false;
-    if (wantRank && !wantAv && W < (int)(s + 3) + 52) wantRank = false;
-    if (!wantRank && wantAv && W < (int)(s + 3) + 52) wantAv = false;
+    /* optional (off by default, so every channel looks alike): a narrow list keeps room for the names by dropping the
+     * avatars first, then the rank icons */
+    if (g_cfg.adapt) {
+        if (wantRank && wantAv && W < (int)(2 * (s + 3)) + 56) wantAv = false;
+        if (wantRank && !wantAv && W < (int)(s + 3) + 40) wantRank = false;
+        if (!wantRank && wantAv && W < (int)(s + 3) + 44) wantAv = false;
+    }
     if (!wantRank && !wantAv) return false;
     int rankW = wantRank ? (int)(s + 3) : 0;
     int avW = wantAv ? (int)(s + 3) : 0;
     int need = rankW + avW + 1;
 
     wchar_t txt[96];
+    LRESULT want = SendMessageW(d->hwndItem, LB_GETTEXTLEN, d->itemID, 0);   /* never let LB_GETTEXT write past our buffer */
+    if (want <= 0 || want >= 96) return false;
     LRESULT n = SendMessageW(d->hwndItem, LB_GETTEXT, d->itemID, (LPARAM)txt);
     if (n <= 0 || n >= 96) return false;
     txt[n] = 0;
@@ -234,8 +265,7 @@ static bool DrawNick(HWND chan, WPARAM wp, DRAWITEMSTRUCT *d)
     d2.rcItem.left = 0; d2.rcItem.top = 0; d2.rcItem.right = W - need; d2.rcItem.bottom = H;
     LRESULT res = DefSubclassProc(chan, WM_DRAWITEM, wp, (LPARAM)&d2);
 
-    COLORREF bg = GetPixel(mem, W - need - 1, H / 2);
-    if (bg == CLR_INVALID) bg = GetSysColor(COLOR_WINDOW);
+    COLORREF bg = RowBackground(mem, W - need, H);
     HBRUSH brush = CreateSolidBrush(bg);
     RECT left = { rc.left, rc.top, rc.left + need, rc.bottom };
     FillRect(d->hDC, &left, brush);
@@ -851,6 +881,7 @@ static std::wstring Run(const std::wstring &in)
     if (v == L"nlcfg") {
         g_cfg.rank = Opt(a, L"rank", L"1") != L"0";
         g_cfg.avatar = Opt(a, L"avatar", L"1") != L"0";
+        g_cfg.adapt = Opt(a, L"auto", L"0") == L"1";
         static const wchar_t *keys[5] = { L"q", L"a", L"o", L"h", L"v" };
         for (int i = 0; i < 5; i++) g_cfg.rankCol[i] = HexColour(Opt(a, keys[i]), g_cfg.rankCol[i]);
         if (!g_cfg.rank && !g_cfg.avatar) UnhookAll();

@@ -28,6 +28,7 @@ ARGS = sys.argv[3:]
 V3 = "v3" in ARGS             # IRCv3 extras: read-marker, chathistory, redaction, account-notify, extended-join
 MORE = "more" in ARGS          # Lurker overflow case
 QUIET = "quiet" in ARGS        # ircd with a real quiet list mode: CHANMODES=bq,...  (+q <mask>)
+LONGNICKS = "longnicks" in ARGS  # nick list with long names that run to the edge of a narrow list
 EXTBAN = "extban" in ARGS      # ircd with extended bans: EXTBAN=~,q  (+b ~q:<mask>)
 NETS = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]
 GHOSTED = [False]
@@ -267,6 +268,17 @@ class Client:
         self.send(f":Spammer!sp@spam.example PRIVMSG {self.nick} :private spam message")
         self.send(f":Spammer!sp@spam.example INVITE {self.nick} #spamchan")
 
+    def hltest(self, chan):
+        """A game bot that says my nick (should be mutable) and a person who says it too (must still highlight)."""
+        ctcp = chr(1)
+        self.send(f":GameBot!gb@bots.example PRIVMSG {chan} :{self.nick}: you scored 100 points this round")
+        time.sleep(0.3)
+        self.send(f":GameBot!gb@bots.example PRIVMSG {chan} :{ctcp}ACTION hands {self.nick} a trophy{ctcp}")
+        time.sleep(0.3)
+        self.send(f":GameBot!gb@bots.example PRIVMSG {chan} :round over, no names here")
+        time.sleep(0.3)
+        self.send(f":Nova!nova@host.example PRIVMSG {chan} :{self.nick} are you there?")
+
     def whois(self, target):
         n = self.nick
         self.send(f":{SRV} 311 {n} {target} nova host.example * :Nova Example")
@@ -342,7 +354,8 @@ class Client:
             n = self.nick
             self.send(f":{n}!{self.user}@127.0.0.1 JOIN {chan}")
             self.send(f":{SRV} 332 {n} {chan} :Mock topic for {chan}")
-            self.send(f":{SRV} 353 {n} = {chan} :@{n} ~Owner &Admin @Kira %Half +Zed Nova Clone1 Clone2")
+            extra = " FiveYellowFlamingosAbc imlonghaoTheLongOne jack7721withsuffix +JerryXiaoVeryLongNickname1" if LONGNICKS else ""
+            self.send(f":{SRV} 353 {n} = {chan} :@{n} ~Owner &Admin @Kira %Half +Zed Nova Clone1 Clone2{extra}")
             self.send(f":{SRV} 366 {n} {chan} :End of /NAMES list.")
             if V3:
                 self.send(f":{SRV} MARKREAD {chan} timestamp=2026-09-30T08:00:00.000Z")
@@ -425,6 +438,8 @@ class Client:
                 threading.Thread(target=self.rtest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "utf8":
                 threading.Thread(target=self.utf8, daemon=True).start()
+            if text.strip().lower() == "hltest":
+                threading.Thread(target=self.hltest, args=(parts[1],), daemon=True).start()
             if text.strip().lower() == "talk":
                 threading.Thread(target=self.talk, args=(parts[1],), daemon=True).start()
         elif cmd == "AWAY":

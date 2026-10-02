@@ -7,10 +7,11 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1409 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1316) return ai;panel;0;c
+  if (%i == 1409) return ui;nladapt;0;c
   if (%i == 1401) return ui;on;0;c
   if (%i == 1402) return ui;nlrank;1;c
   if (%i == 1403) return ui;nlavatar;1;c
@@ -310,7 +311,8 @@ dialog ns_opt {
   check "Rank icons in the nick list (owner, admin, op, halfop, voice)", 1402, 108 66 234 9
   check "Coloured initials (avatars) in the nick list", 1403, 108 79 234 9
   check "Unread-mentions count on mIRC's taskbar button", 1404, 108 92 234 9
-  text "", 1405, 92 112 250 36
+  check "Hide them in narrow nick lists to keep names readable (otherwise every channel looks the same)", 1409, 108 105 238 9
+  text "", 1405, 92 122 250 26
   text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 152 250 27
   button "Check helper", 1407, 92 184 70 12
   button "Emoji picker", 1408, 166 184 60 12
@@ -539,7 +541,7 @@ dialog ns_about {
   option dbu
   icon 1, 0 0 250 60, $mircexe, 0, noborder
   text "", 2, 6 64 238 10, center
-  text "A ground-up remake of the classic full-feature mIRC script packs, rebuilt for mIRC 7.85 and the modern IRC: IRCv3, dark mode, TLS and Unicode, with no DLLs.", 3, 12 76 226 22, center
+  text "A ground-up remake of the classic full-feature mIRC script packs, rebuilt for mIRC 7.85 and the modern IRC: IRCv3, dark mode, TLS and Unicode. Pure script at heart; optional helpers add extras.", 3, 12 76 226 22, center
   edit "", 4, 6 102 238 44, read multi vsbar
   button "Command reference", 5, 6 152 76 13
   button "OK", 6, 190 152 54 13, ok default cancel
