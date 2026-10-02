@@ -2,7 +2,7 @@
   NeonScript 2026 - Windows helper
 
   A small background helper for the things mIRC cannot do by itself: real Windows notifications (toasts),
-  reading text aloud with the Windows voices, and uploading a file to a host you choose.
+  reading text aloud with the Windows voices, dictation (speech to text) and uploading a file to a host you choose.
 
     powershell -NoProfile -ExecutionPolicy Bypass -File win.ps1 -Dir <folder> [-Register 1] [-Icon <file>]
 
@@ -115,6 +115,12 @@ function Pump-Events {
             Unregister-Event -SourceIdentifier $sid -ErrorAction SilentlyContinue
             $script:toasts.Remove($id)
         }
+        elseif ($sid -eq 'stt_heard') {
+            try {
+                $r = $e.SourceEventArgs.Result
+                if ($r -and $r.Confidence -ge 0.3 -and $r.Text) { Emit @{ type = 'heard'; text = $r.Text; conf = [Math]::Round($r.Confidence, 2) } }
+            } catch { }
+        }
         Remove-Event -EventIdentifier $e.EventIdentifier -ErrorAction SilentlyContinue
     }
     # forget toasts nobody clicked after ten minutes
@@ -153,6 +159,38 @@ function List-Voices {
         Emit @{ type = 'voices'; list = (($s.GetInstalledVoices() | Where-Object { $_.Enabled } | ForEach-Object { $_.VoiceInfo.Name }) -join '|') }
         $s.Dispose()
     } catch { Emit @{ type = 'error'; what = 'voices'; msg = $_.Exception.Message } }
+}
+
+# ---------------------------------------------------------------- dictation (speech to text) - only while mIRC has it switched on
+# Uses the speech recogniser that ships with Windows (System.Speech, on this PC, no cloud service).  What it hears
+# comes back as "heard" events; mIRC puts the text in your editbox - it is never sent for you.
+$rec = $null
+function Start-Listen($c) {
+    if ($fake) { Log ("listen|" + $c.lang); Emit @{ type = 'listening'; state = 'on' }; return }
+    try {
+        Add-Type -AssemblyName System.Speech
+        if ($null -eq $script:rec) {
+            $ci = $null
+            if ($c.lang) { try { $ci = New-Object System.Globalization.CultureInfo([string]$c.lang) } catch { } }
+            $e = $null
+            if ($ci) { try { $e = New-Object System.Speech.Recognition.SpeechRecognitionEngine($ci) } catch { } }
+            if ($null -eq $e) {
+                try { $e = New-Object System.Speech.Recognition.SpeechRecognitionEngine } catch { }
+            }
+            if ($null -eq $e) { Emit @{ type = 'error'; what = 'listen'; msg = 'no speech recogniser is installed (Windows Settings > Time & language > Speech)' }; return }
+            $e.LoadGrammar((New-Object System.Speech.Recognition.DictationGrammar))
+            $e.SetInputToDefaultAudioDevice()
+            Register-ObjectEvent -InputObject $e -EventName SpeechRecognized -SourceIdentifier 'stt_heard' | Out-Null
+            $script:rec = $e
+        }
+        $script:rec.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)
+        Emit @{ type = 'listening'; state = 'on' }
+    } catch { Emit @{ type = 'error'; what = 'listen'; msg = $_.Exception.Message } }
+}
+function Stop-Listen {
+    if (-not $fake) { try { if ($script:rec) { $script:rec.RecognizeAsyncCancel() } } catch { } }
+    else { Log 'stoplisten' }
+    Emit @{ type = 'listening'; state = 'off' }
 }
 
 # ---------------------------------------------------------------- uploads (only when mIRC asks, only to the address it gives)
@@ -233,6 +271,9 @@ try {
                 'voices'     { List-Voices }
                 'upload'     { Upload-File $c }
                 'clipimage'  { Clip-Image $c }
+                'listen'     { Start-Listen $c }
+                'stoplisten' { Stop-Listen }
+                'simheard'   { if ($fake) { Emit @{ type = 'heard'; text = $c.text; conf = '0.9' } } }
                 'register'   { if (-not $fake) { Register-AppName } }
                 'unregister' { if (-not $fake) { Unregister-AppName } }
                 'simclick'   { if ($fake) { Emit @{ type = 'click'; key = $c.key } } }
@@ -245,5 +286,6 @@ try {
 } finally {
     Remove-Item -LiteralPath $aliveF -Force
     if ($synth) { $synth.Dispose() }
+    if ($rec) { try { $rec.RecognizeAsyncCancel(); $rec.Dispose() } catch { } }
     $mutex.ReleaseMutex()
 }

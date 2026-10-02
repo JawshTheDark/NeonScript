@@ -2,6 +2,11 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
+## 2026.15.0
+
+* **Dictation** (`/dictate`, `/neon dictate`): speech to text through the Windows speech recogniser, text lands in the editbox, never
+  auto-sent, off after every restart. Completes the Phase 8 list (the unread badge and taskbar progress came with the native helper).
+
 ## 2026.14.0
 
 * **Settings sync** (`/neon sync`, Control Panel > Sync): three-way, key-by-key merge of your settings through a folder you

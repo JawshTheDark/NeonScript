@@ -91,9 +91,9 @@ No DLL: the same hidden-PowerShell-helper pattern the media buttons use.
 |---|---|---|
 | Windows toast notifications | M | Mentions and PMs as real toasts (click to jump), respects Do not disturb. |
 | Speak mentions (text-to-speech) | S | SAPI voice, per-channel opt-in. |
-| Speech to text (dictate into the editbox) | M `(exp)` | Windows speech recognition through the helper. |
+| Speech to text (dictate into the editbox) - DONE 2026.15.0 | M `(exp)` | Windows speech recognition through the helper. |
 | Paste / image upload helper | M `(web)` | `/paste`, clipboard image or file to a host you choose, link dropped in the editbox. |
-| Taskbar progress and unread badge | S | |
+| Taskbar progress and unread badge - DONE 2026.13.0 (native helper) | S | |
 
 ### Phase 9 - More IRCv3  (needs the server to offer it; mock-tested, then tried on Lurker)
 Typing indicators, read markers (`draft/read-marker`), message edit and redaction display, `account-notify` /

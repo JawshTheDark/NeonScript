@@ -102,6 +102,13 @@ Right-click any toolbar button for its own menu.
   The panels can only load NeonScript's own files; every other address is refused, and what a page sends back is treated as untrusted text.
 * Apart from the panels' WebView2 profile folder (`data\ui\profile`) it touches nothing but mIRC's own windows. `/neon ui off` puts everything back.
 
+## Dictation (optional)
+
+* `/dictate` (menus, Control Panel > Windows integration > Dictate) switches speech-to-text on and off. Windows' own speech recogniser on
+  this PC turns what you say into text, which NeonScript puts in the editbox of the window you started in - you read it and press
+  Enter; nothing is ever sent for you. The microphone is only used while it is on and it never starts by itself, not even after a restart.
+  With the native helper on, the taskbar button shows a "busy" bar while it listens.
+
 ## Settings sync (optional)
 
 * `/neon sync folder <path>` then `/neon sync on` (or Control Panel > Sync): NeonScript keeps your settings in step through a

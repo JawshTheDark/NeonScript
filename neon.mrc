@@ -5,7 +5,7 @@
 ; ============================================================================
 
 alias ns.name return NeonScript
-alias ns.ver return 2026.14.0
+alias ns.ver return 2026.15.0
 alias ns.tag return $+($ns.name,$chr(32),$ns.ver)
 alias ns.ini return $+($scriptdir,neon.ini)
 alias ns.profini return $+($scriptdir,profiles.ini)

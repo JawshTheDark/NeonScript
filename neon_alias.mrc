@@ -456,6 +456,7 @@ menu channel {
   .Symbol map...:neon chars
   .Preview a link...:preview $$?="Link to preview (http:// or https://):"
   .Emoji picker...:emoji
+  .Dictate (speech to text):dictate
   AI helpers (opt-in)
   .Catch me up on this channel:ai catchup
   .Look for trouble (suggestions only):ai mod
@@ -475,6 +476,7 @@ menu query {
   Tools
   .Text effects...:neon fx
   .Emoji picker...:emoji
+  .Dictate (speech to text):dictate
   AI helpers (opt-in)
   .Translate the last line...:ai translate $$?="Translate into which language?"
   .AI settings...:ai settings

@@ -283,6 +283,7 @@ dialog ns_opt {
   button "Test notification", 1216, 92 196 70 12
   button "Test voice", 1217, 166 196 50 12
   button "List voices", 1218, 220 196 50 12
+  button "Dictate", 1219, 274 196 52 12
 
   ; ---- page 12 : AI helpers  (ids 1300-1399)
   box "AI helpers (optional)", 1300, 82 38 266 172
@@ -486,6 +487,7 @@ on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
 on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
 on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
 on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
+on *:DIALOG:ns_opt:sclick:1219:{ optsave | ns.later dictate }
 on *:DIALOG:ns_opt:sclick:1504:{ ns.later neon sync folder | .timer.nssyncui -o 1 2 ns.sync.refresh }
 on *:DIALOG:ns_opt:sclick:1505:{ ns.later ns.sync.toggle }
 on *:DIALOG:ns_opt:sclick:1506:{ ns.later neon sync now | .timer.nssyncui -o 1 3 ns.sync.refresh }

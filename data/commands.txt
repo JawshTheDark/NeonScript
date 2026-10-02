@@ -116,6 +116,7 @@ Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank 
 /ai do <request>|Plain-English moderation: shows the commands, asks, then queues them (kick, ban, quiet, mass, ignore, topic, mode only)
 /ai ask <question>|A plain question to the model (no chat is sent)
 /ai test, /ai key <key>|Check the connection; store an API key (protected, never in a backup)
+/dictate, /neon dictate [on|off|status]|Dictation: Windows speech recognition puts what you say in the editbox (microphone only while on; nothing is sent for you)
 #Native helper (optional)
 /emoji|Emoji picker panel - search, groups, recent; inserts at the cursor (needs the native helper, else opens the symbol map)
 /neon ui [on|off|status]|Nick list icons, avatars and the taskbar unread badge through neonui.dll (SHA-256 verified, off by default)

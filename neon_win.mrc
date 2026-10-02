@@ -18,7 +18,7 @@ alias ns.win.o return $+($ns.win.dir,winout\)
 alias ns.win.f return $+($ns.win.dir,win.,$1)
 alias ns.win.script return $ns.data(win.ps1)
 ; any feature that needs the helper switched on?
-alias ns.win.wanted return $iif($ns.flag(toast,on,0) || $ns.flag(speak,on,0),1,0)
+alias ns.win.wanted return $iif($ns.flag(toast,on,0) || $ns.flag(speak,on,0) || %ns.dict.on,1,0)
 alias ns.win.alive {
   var %f = $ns.win.f(alive)
   if (!$exists(%f)) return 0
@@ -128,6 +128,8 @@ alias ns.win.tick {
 alias ns.win.evt {
   var %t = $1
   if (%t == click) { ns.win.click $hget(ns.wevt,key) | return }
+  if (%t == heard) { ns.dict.heard $hget(ns.wevt,text) | return }
+  if (%t == listening) { ns.dict.state $hget(ns.wevt,state) | return }
   if (%t == error) { ns.err Windows helper ( $+ $hget(ns.wevt,what) $+ ): $hget(ns.wevt,msg) | return }
   if (%t == voices) { ns.say installed voices: $replace($hget(ns.wevt,list),$chr(124),$chr(44) $+ $chr(32)) | return }
   if (%t == upload) { ns.paste.done $hget(ns.wevt,id) $hget(ns.wevt,result) $+ $iif($hget(ns.wevt,error) != $null,$chr(1) $+ $hget(ns.wevt,error)) | return }
@@ -234,6 +236,66 @@ alias neon.speak {
 }
 
 ; ============================================================================
+;  Dictation (speech to text):  /dictate  or  /neon dictate [on|off|status]
+;  The microphone is only listened to while it is on (it never starts by itself, not even after a restart).  Windows' own
+;  speech recogniser on this PC turns it into text and NeonScript puts the text in the editbox of the window you started in -
+;  you read it and press Enter; nothing is ever sent for you.
+; ============================================================================
+alias dictate neon.dictate $1-
+alias neon.dictate {
+  var %c = $lower($1)
+  if (%c == status) { ns.say dictation is $iif(%ns.dict.on,ON,off) $+ . /dictate toggles it. | return }
+  if (%c == off) || (%c == $null && %ns.dict.on) {
+    unset %ns.dict.on
+    ns.win.send stoplisten
+    ns.dict.state off
+    return
+  }
+  if (%c == on) || (%c == $null) {
+    set %ns.dict.on 1
+    set %ns.dict.win $active
+    set %ns.dict.cid $cid
+    ns.win.start
+    ns.win.new
+    ns.win.set lang $ns.get(dictate,lang)
+    ns.win.go listen
+    ns.say dictation starting - speak, then check the text in the editbox and press Enter. /dictate stops it.
+    return
+  }
+  ns.err usage: /dictate [on|off|status]
+}
+alias ns.dict.state {
+  ; the helper says it is (not) listening: mirror it on the taskbar button when the native helper is on
+  if ($1 == on) && ($isalias(ns.ui.cmd)) && ($ns.ui.active) var %r = $ns.ui.cmd($+(progress,$chr(9),indeterminate,$chr(9),0))
+  if ($1 == off) {
+    unset %ns.dict.on
+    if ($isalias(ns.ui.cmd)) && ($ns.ui.active) var %r = $ns.ui.cmd($+(progress,$chr(9),none,$chr(9),0))
+    ns.say dictation is off.
+  }
+}
+alias ns.dict.heard {
+  var %t = $remove($strip($1-),$chr(9),$cr,$lf), %w = %ns.dict.win, %cid = %ns.dict.cid
+  if (!%ns.dict.on) || (%t == $null) return
+  %t = $left(%t,300)
+  if (%cid) scid %cid ns.dict.put %w %t
+  else ns.dict.put %w %t
+}
+; add the words at the cursor (with a space when needed) in the editbox of window $1
+alias ns.dict.put {
+  var %w = $1, %add = $2-, %t, %s, %e, %pre, %n
+  if (!$window(%w)) %w = $active
+  %t = $editbox(%w)
+  %s = $editbox(%w).selstart
+  %e = $editbox(%w).selend
+  if (%s !isnum) || (%e !isnum) || (%s < 1) { %s = $calc($len(%t) + 1) | %e = %s }
+  %pre = $left(%t,$calc(%s - 1))
+  if (%pre != $null) && ($right(%pre,1) != $chr(32)) %add = $chr(32) $+ %add
+  %n = $+(%pre,%add,$mid(%t,%e))
+  var %pos = $calc($len(%pre) + $len(%add) + 1)
+  editbox $+(-a,b,%pos,e,%pos) %n
+}
+
+; ============================================================================
 ;  /paste  -  upload to an address you configured
 ; ============================================================================
 ; /paste [file | text...]    no argument: the clipboard (text, else a picture)
@@ -322,11 +384,11 @@ alias ns.paste.done {
 
 ; ---------------------------------------------------------------- lifecycle
 on *:SIGNAL:ns.boot:{
-  unset %ns.win.lasttoast
+  unset %ns.win.lasttoast %ns.dict.on
   if ($ns.win.wanted) .timer.nswb -o 1 5 ns.win.apply
   .timer.nswt 0 2 ns.win.tick
 }
-on *:SIGNAL:ns.exit:{ ns.win.quit }
+on *:SIGNAL:ns.exit:{ unset %ns.dict.on | ns.win.quit }
 on *:SIGNAL:ns.uninstall:{
   if ($ns.flag(toast,on,0)) && ($ns.win.alive) ns.win.send unregister
   ns.win.quit
