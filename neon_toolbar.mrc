@@ -9,7 +9,7 @@
 alias ns.tb.all return connect servers channels favorites chanctl query away dnd sound notify mentions mprev mplay mnext dash theme fx symbols protect access dcc logs options help
 alias ns.tb.default return connect servers channels favorites chanctl query - away dnd sound notify mentions - mprev mplay mnext - dash theme fx symbols - protect access dcc logs - options help
 alias ns.tb.order return $ns.get(toolbar,order,$ns.tb.default)
-alias ns.tb.size return $ns.get(toolbar,size,2)
+alias ns.tb.size return $ns.get(toolbar,size,3)
 
 ; ---------------------------------------------------------------- custom button storage
 alias ns.cb.ini return $+($scriptdir,custom.ini)
@@ -192,13 +192,13 @@ alias ns.tb.build {
   ns.tb.resync
 }
 alias -l tbadd {
-  toolbar $+(-avz,$ns.tb.size) $+(ns_,$1) $qt($ns.tb.tip($1)) $qt($ns.icon($ns.tb.icon($1))) "/ns.tb.click $!1" $+(@nstb_,$1)
+  toolbar -avz3 $+(ns_,$1) $qt($ns.tb.tip($1)) $qt($ns.icon($ns.tb.icon($1))) "/ns.tb.click $!1" $+(@nstb_,$1)
 }
 alias -l tbaddcustom {
   var %id = $1, %f = $ns.cb.iconfile(%id), %n = $ns.cb.get(%id,iconidx,0)
   if (!$exists(%f)) %f = $ns.asset(wand.png)
   ns.cb.writemenu %id
-  if ($ns.cb.isimg(%f)) toolbar $+(-avz,$ns.tb.size) $+(ns_,%id) $qt($ns.cb.get(%id,tip)) $qt(%f) "/ns.tb.click $!1" $qt($ns.cb.menufile(%id))
+  if ($ns.cb.isimg(%f)) toolbar -avz3 $+(ns_,%id) $qt($ns.cb.get(%id,tip)) $qt(%f) "/ns.tb.click $!1" $qt($ns.cb.menufile(%id))
   else toolbar $+(-az,$ns.tb.size,n,%n) $+(ns_,%id) $qt($ns.cb.get(%id,tip)) $qt(%f) "/ns.tb.click $!1" $qt($ns.cb.menufile(%id))
 }
 
@@ -419,8 +419,8 @@ dialog ns_tbedit {
   button "Delete custom button", 14, 152 92 78 13
   button "Reset to default", 5, 152 110 78 13
   box "Icon size", 6, 152 128 78 40
-  radio "Small", 7, 158 138 66 9
-  radio "Large", 8, 158 148 66 9
+  radio "Small (16 px)", 7, 158 138 66 9
+  radio "Large (24 px)", 8, 158 148 66 9
   radio "Actual (32 px)", 9, 158 158 66 9
   button "OK", 10, 126 174 50 13, ok default
   button "Cancel", 11, 180 174 50 13, cancel

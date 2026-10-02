@@ -427,7 +427,7 @@ alias neon.rule {
   }
   if (%c == resume) {
     unset %ns.auto.paused
-    hdel ns.afire all
+    if ($hget(ns.afire)) hdel ns.afire all
     ns.say rules resumed.
     return
   }

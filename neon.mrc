@@ -13,9 +13,15 @@ alias ns.asset return $+($scriptdir,assets\,$1)
 alias ns.data return $+($scriptdir,data\,$1)
 ; toolbar icon file for a bundled name: the chosen icon set first (Display page), the standard glossy one otherwise
 alias ns.icon {
-  var %set = $ns.get(toolbar,iconset,glossy), %f = $+($scriptdir,assets\icons_,%set,\,$1)
-  if (%set != glossy) && ($exists(%f)) return %f
-  return $ns.asset($1)
+  var %set = $ns.get(toolbar,iconset,glossy), %rel = $1, %f, %sz = $ns.get(toolbar,size,3), %s
+  if (%set != glossy) && ($exists($+($scriptdir,assets\icons_,%set,\,$1))) %rel = $+(icons_,%set,\,$1)
+  ; the Icon size setting: mIRC's /toolbar -z does not rescale PNGs, so small (1) and large (2) use the 16 / 24 px copies
+  ; made by tools\make_icon_sizes.py, "actual" (3) the 32 px originals
+  if (%sz == 1) || (%sz == 2) {
+    %s = $+($scriptdir,assets\s,$iif(%sz == 1,16,24),\,%rel)
+    if ($exists(%s)) return %s
+  }
+  return $+($scriptdir,assets\,%rel)
 }
 alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_v3 neon_web neon_theme neon_toolbar neon_events neon_mts neon_tedit neon_evt neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_extra neon_fun neon_ai neon_ui neon_sync neon_alias
 

@@ -186,7 +186,7 @@ alias ns.v3.edit {
 raw ACCOUNT:*:{
   haltdef
   if (!$ns.v3.on) return
-  if ($1 == $chr(42)) hdel ns.acct $+($cid,.,$nick)
+  if ($1 == $chr(42)) { if ($hget(ns.acct)) hdel ns.acct $+($cid,.,$nick) }
   else hadd -m ns.acct $+($cid,.,$nick) $1
 }
 alias ns.v3.acct return $hget(ns.acct,$+($cid,.,$1))

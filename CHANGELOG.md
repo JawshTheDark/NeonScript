@@ -4,6 +4,9 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 
 ## 2026.16.0
 
+* **Toolbar icon size** (Customize Toolbar > Small / Large / Actual) now really changes the icons: mIRC's /toolbar -z switch does not rescale PNG
+  pictures, so the 16 px and 24 px copies (`assets\s16`, `assets\s24`, made by `tools\make_icon_sizes.py`) are chosen instead. Default is Actual (32 px).
+* Debug pass: two more `hdel` calls guarded; the whole test suite (31 scripts) was run with the status window captured - no script errors.
 * **Highlights-only ignore** (Ignore Manager: "Only stop them highlighting me", `/neon nohl <nick>`, nick-list menu "Never highlight me"):
   a person or bot you keep reading but who must not highlight you. Their channel lines never reach the mentions inbox, toasts,
   speech, the taskbar badge, the highlight sound, "mention" rules or the mention counter, and mIRC's own highlight (colour, flash,
