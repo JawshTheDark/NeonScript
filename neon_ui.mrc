@@ -33,12 +33,15 @@ alias ns.ui.apply {
   var %res = $ns.ui.cmd($+(nlcfg,%t,rank=,%r,%t,avatar=,%a,%t,auto=,$ns.flag(ui,nladapt,0),%t,size=,$ns.get(ui,nlsize,auto),%t,min=,$ns.get(ui,nlmin,110),%t,max=,$ns.get(ui,nlmax,240),%t,fixed=,$ns.get(ui,nlfixed,150)))
   if (%res != ok) ns.log ui nlcfg: %res
   ns.ui.badge
+  ns.ui.chrome
+  ns.tbc.push
   ns.ui.tick
 }
 ; hook channel windows that appeared since the last look, refresh the badge
 alias ns.ui.tick {
   if (!$ns.ui.active) return
-  if ($ns.flag(ui,nlrank,1)) || ($ns.flag(ui,nlavatar,1)) || ($ns.get(ui,nlsize,auto) != off) var %n = $ns.ui.cmd($+(nlscan))
+  var %n = $ns.ui.cmd($+(nlscan))
+  ns.tbc.tick
 }
 ; the number on the taskbar button
 alias ns.ui.badge {
@@ -50,11 +53,89 @@ alias ns.ui.badge {
   var %res = $ns.ui.cmd($+(badge,%t,%n,%t,%n,$chr(32),unread mention,$iif(%n != 1,s)))
   if (%res != ok) ns.log ui badge: %res
 }
+; ---- window frame colours (title bar, border, scroll bars) taken from the theme
+alias ns.ui.hex {
+  var %h = $remove($1,$chr(35))
+  return $iif($regex(ns.hx,%h,/^[0-9a-fA-F]{6}$/),%h,$2)
+}
+alias ns.ui.chrome {
+  if (!$ns.ui.active) return
+  var %t = $ns.ui.tab, %d = $ns.ui.isdark, %on = $ns.flag(ui,chrome,1), %cap, %txt, %bd
+  %cap = $iif(%d,181824,ffffff)
+  %txt = $iif(%d,e8e8f2,1d1d28)
+  %bd = $ns.ui.hex($ns.get(theme,acc1,ff2e88),ff2e88)
+  var %r = $ns.ui.cmd($+(chrome,%t,on=,%on,%t,dark=,%d,%t,caption=,%cap,%t,text=,%txt,%t,border=,%bd,%t,scroll=,%d))
+  if (%r != ok) ns.log ui chrome: %r
+}
+
+; ---- unread and mention counts on the tree bar entries
+; ns.tbc: "<cid>.<window>" = "<unread messages> <mentions>"; the numbers are drawn by the DLL next to the entry
+alias ns.tbc.on return $iif($ns.ui.active && $ns.flag(ui,treebadge,1),1,0)
+alias ns.tbc.inc {
+  ; ns.tbc.inc <window> <1|2>   (1 = a message, 2 = a mention)
+  if (!$ns.tbc.on) return
+  var %k = $+($cid,.,$1), %v = $hget(ns.tbc,%k), %m = $gettok(%v,1,32), %h = $gettok(%v,2,32)
+  if (%m == $null) %m = 0
+  if (%h == $null) %h = 0
+  if ($2 == 1) inc %m
+  else inc %h
+  hadd -m ns.tbc %k %m %h
+  .timer.nstbc -o 1 1 ns.tbc.push
+}
+alias ns.tbc.add {
+  if ($nick == $me) return
+  if ($ns.ur.seen($1)) return
+  ns.tbc.inc $1 1
+}
+alias ns.tbc.ment ns.tbc.inc $1 2
+on *:TEXT:*:#:{ ns.tbc.add $chan }
+on *:ACTION:*:#:{ ns.tbc.add $chan }
+on *:TEXT:*:?:{ ns.tbc.add $nick }
+on *:ACTION:*:?:{ ns.tbc.add $nick }
+; looking at a window clears its numbers
+alias ns.tbc.clear {
+  var %k = $+($cid,.,$1)
+  if ($hget(ns.tbc,%k) != $null) {
+    hdel ns.tbc %k
+    .timer.nstbc -o 1 1 ns.tbc.push
+  }
+}
+on *:ACTIVE:*:{ if ($appactive) ns.tbc.clear $active }
+alias ns.tbc.tick { if ($appactive) && ($hget(ns.tbc)) ns.tbc.clear $active }
+alias ns.tbc.push {
+  var %t = $ns.ui.tab, %on = $ns.tbc.on, %n, %i = 1, %k, %cid, %win, %v, %j, %lab, %list, %c = 0
+  if (!$ns.ui.active) return
+  if (%on) && ($hget(ns.tbc)) {
+    %n = $hget(ns.tbc,0).item
+    while (%i <= %n) && (%c < 50) {
+      %k = $hget(ns.tbc,%i).item
+      inc %i
+      %cid = $gettok(%k,1,46)
+      %win = $gettok(%k,2-,46)
+      %v = $hget(ns.tbc,%k)
+      %lab = $null
+      %j = 1
+      while (%j <= $scon(0)) {
+        if ($scon(%j).cid == %cid) %lab = $+($iif($scon(%j).network,$scon(%j).network,$scon(%j).server),$chr(32),$scon(%j).me)
+        inc %j
+      }
+      if (%lab == $null) continue
+      %list = $+(%list,%t,%lab,$chr(31),%win,$chr(31),$gettok(%v,1,32),$chr(31),$gettok(%v,2,32))
+      inc %c
+    }
+  }
+  var %r = $ns.ui.cmd($+(treebadge,%t,%on,%t,4F6BED,%t,E5484D,%list))
+  if (%r != ok) ns.log ui treebadge: %r
+}
 ; switch everything the DLL did off again (before it is unloaded, or when the helper is turned off)
 alias ns.ui.stop {
   .timer.nsui off
   .timer.nsuipoll off
   if ($hget(ns.uis,wv) == 1) var %x = $ns.ui.cmd(wvcloseall)
+  if ($hget(ns.uis,ok) == 1) {
+    %x = $ns.ui.cmd($+(treebadge,$chr(9),0))
+    %x = $ns.ui.cmd($+(chrome,$chr(9),on=0))
+  }
   if ($hget(ns.uis)) hdel ns.uis panels
   if ($exists($ns.ui.dll)) && ($hget(ns.uis,ok) == 1) {
     var %r = $ns.ui.cmd(nlunhook)

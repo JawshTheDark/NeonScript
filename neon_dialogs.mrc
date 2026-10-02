@@ -7,11 +7,13 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1410 1411 1412 1413 1409 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1419 1420 1410 1411 1412 1413 1409 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
   if (%i == 1316) return ai;panel;0;c
   if (%i == 1409) return ui;nladapt;0;c
+  if (%i == 1419) return ui;treebadge;1;c
+  if (%i == 1420) return ui;chrome;1;c
   if (%i == 1410) return ui;nlsize;auto;s;off,auto,fixed
   if (%i == 1411) return ui;nlmin;110;e
   if (%i == 1412) return ui;nlmax;240;e
@@ -325,11 +327,13 @@ dialog ns_opt {
   edit "", 1412, 170 131 24 11, limit 3
   text "fixed", 1417, 200 133 20 9
   edit "", 1413, 222 131 24 11, limit 3
-  text "pixels - in auto mode the list is exactly as wide as the longest nickname needs, within min and max; the splitter is then managed by NeonScript", 1418, 250 129 96 27
-  text "", 1405, 92 154 250 16
-  text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 168 250 22
-  button "Check helper", 1407, 92 184 70 12
-  button "Emoji picker", 1408, 166 184 60 12
+  text "pixels", 1418, 250 133 40 9
+  check "Unread and mention counts on the tree bar entries", 1419, 108 146 234 9
+  check "Match the window frames (title bar, border, scroll bars) to the theme", 1420, 108 158 234 9
+  text "", 1405, 92 172 250 16
+  text "neonui.dll is open source (native folder) and only touches mIRC's own windows.", 1406, 92 184 250 9
+  button "Check helper", 1407, 92 195 70 12
+  button "Emoji picker", 1408, 166 195 60 12
 
   ; ---- page 14 : Sync  (ids 1500-1599)
   box "Settings sync (optional)", 1500, 82 38 266 172

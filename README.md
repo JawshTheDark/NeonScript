@@ -105,6 +105,8 @@ Right-click any toolbar button for its own menu.
 * **Nick list icons and avatars** - an icon for owner, admin, op, halfop and voice, and a coloured initial for everyone. mIRC
   still paints the nick (colours, away dimming, selection); the helper only adds the icons on the left. A narrow nick list
   drops the avatars first, then the icons, so names never get squeezed.
+* **Tree bar counts** - unread-mention (red) and unread-message (blue) pills next to the entries of mIRC's tree bar.
+* **Theme-matched frames** - title bar, border and scroll bars follow the NeonScript theme (Windows 11).
 * **Taskbar badge** - the number of unread mentions on mIRC's taskbar button.
 * **HTML panels** (WebView2, which ships with Windows 11 and Edge) - small windows with pages from `data\ui`: the **emoji picker**
   (`/emoji`: search by name, groups, recently used, inserts at the cursor) and a **card** window that shows AI answers with

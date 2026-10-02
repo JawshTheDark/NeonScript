@@ -6,6 +6,7 @@
  * What it does (and nothing else):
  *   nlscan / nlcfg / nlunhook   rank icons and coloured initials ("avatars") in the nick list of every channel window
  *   badge / progress            unread count on mIRC's taskbar button, progress bar on the taskbar button
+ *   treebadge / chrome          unread pills on the tree bar entries; title bar / border / scroll bar colours of mIRC's windows
  *   ver                         version text
  * It never opens a network connection, never reads or writes files, and only touches mIRC's own windows.
  * NeonScript checks this file's SHA-256 against data\neonui.sha256 before it ever loads it.
@@ -31,6 +32,8 @@ using std::max;
 #include <mutex>
 #include <gdiplus.h>
 #include <commctrl.h>
+#include <uxtheme.h>
+#include <set>
 #include <shobjidl.h>
 #include <cmath>
 #include <cstdlib>
@@ -39,7 +42,7 @@ using std::max;
 #include <string>
 #include <vector>
 
-#define NEONUI_VERSION L"neonui 1.1"
+#define NEONUI_VERSION L"neonui 1.2"
 
 typedef struct {
     DWORD mVersion;
@@ -113,6 +116,7 @@ static bool g_sized = false;                           /* we have moved nick lis
 static const UINT_PTR HOOK_ID = 0x4E55;     /* "NU" */
 
 static void NlApply(HWND chan, bool force);          /* nick list width, below */
+static void ChromeAll(bool force);                    /* window frame colours, below */
 static bool NlWanted() { return g_cfg.rank || g_cfg.avatar || g_cfg.sizeMode; }
 
 static int RankIndex(wchar_t c)             /* q a o h v  ->  0..4 */
@@ -356,6 +360,7 @@ static int NickScan()
     if (g_mirc && NlWanted()) EnumChildWindows(g_mirc, ScanCb, 0);
     if (g_cfg.sizeMode)
         for (auto &kv : g_hooks) NlApply(kv.first, false);
+    ChromeAll(false);
     return (int)g_hooks.size();
 }
 
@@ -578,6 +583,288 @@ static std::wstring PressMenu(const std::wstring &which)
     UINT id = 0;
     if (!FindMenuItem(bar, w.c_str(), &id, 0)) return L"error:no such menu item";
     PostMessageW(g_mirc, WM_COMMAND, MAKEWPARAM(id, 0), 0);
+    return L"ok";
+}
+
+/* ===================================================================================== treebar
+ * mIRC's tree bar is a SysTreeView32 inside a "mIRC_TreeBar" window of the main window. */
+static HWND FindTreeView()
+{
+    if (!g_mirc) return nullptr;
+    HWND bar = nullptr;
+    struct S { HWND bar; } st = { nullptr };
+    EnumChildWindows(g_mirc, [](HWND h, LPARAM l) -> BOOL {
+        wchar_t cls[64];
+        if (GetClassNameW(h, cls, 64) && wcscmp(cls, L"mIRC_TreeBar") == 0) { ((S *)l)->bar = h; return FALSE; }
+        return TRUE;
+    }, (LPARAM)&st);
+    bar = st.bar;
+    return bar ? FindWindowExW(bar, nullptr, L"SysTreeView32", nullptr) : nullptr;
+}
+
+static void TreeDumpRec(HWND tv, HTREEITEM it, int depth, std::wstring &out)
+{
+    while (it && out.size() < 3500) {
+        wchar_t text[96] = {};
+        TVITEMW ti = {};
+        ti.mask = TVIF_TEXT | TVIF_PARAM | TVIF_STATE | TVIF_HANDLE;
+        ti.hItem = it;
+        ti.pszText = text;
+        ti.cchTextMax = 96;
+        ti.stateMask = 0xFFFF;
+        SendMessageW(tv, TVM_GETITEMW, 0, (LPARAM)&ti);
+        RECT rc = {};
+        *(HTREEITEM *)&rc = it;
+        BOOL vis = (BOOL)SendMessageW(tv, TVM_GETITEMRECT, TRUE, (LPARAM)&rc);
+        wchar_t b[200];
+        swprintf(b, 200, L"%d|%ls|%lu|%x|%d,%d,%d,%d;", depth, text, (unsigned long)ti.lParam, (unsigned)ti.state, vis ? (int)rc.left : -1, (int)rc.top, (int)rc.right, (int)rc.bottom);
+        out += b;
+        HTREEITEM child = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_CHILD, (LPARAM)it);
+        if (child) TreeDumpRec(tv, child, depth + 1, out);
+        it = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_NEXT, (LPARAM)it);
+    }
+}
+
+static std::wstring TreeDump()
+{
+    HWND tv = FindTreeView();
+    if (!tv) return L"no tree bar";
+    std::wstring out;
+    HTREEITEM root = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_ROOT, 0);
+    TreeDumpRec(tv, root, 0, out);
+    return out;
+}
+
+/* ---- unread / mention badges on the tree bar entries ------------------------------------------------------------------
+ * NeonScript counts unread messages and mentions per window and sends the numbers ("treebadge").  The tree bar's custom-draw
+ * notifications go to its parent window; after mIRC has drawn an item we paint a small pill at the right edge of its row.
+ * Items are matched by their text and the text of the network entry they hang under. */
+struct TbEntry {
+    std::wstring net, win;
+    int msgs = 0, ments = 0;
+};
+static std::vector<TbEntry> g_tbe;
+static bool g_tbOn = false;
+static HWND g_tbBar = nullptr, g_tbTv = nullptr;
+static COLORREF g_tbMsgCol = RGB(0x4F, 0x6B, 0xED), g_tbHotCol = RGB(0xE5, 0x48, 0x4D);
+static const UINT_PTR TB_ID = 0x4E56;
+static int g_tbNotify = 0, g_tbPre = 0, g_tbPost = 0, g_tbHit = 0, g_tbAny = 0;
+
+static std::wstring LowerW(std::wstring s)
+{
+    for (auto &c : s) c = (wchar_t)towlower(c);
+    return s;
+}
+
+static std::wstring TvText(HWND tv, HTREEITEM it)
+{
+    wchar_t t[96] = {};
+    TVITEMW ti = {};
+    ti.mask = TVIF_TEXT | TVIF_HANDLE;
+    ti.hItem = it;
+    ti.pszText = t;
+    ti.cchTextMax = 96;
+    SendMessageW(tv, TVM_GETITEMW, 0, (LPARAM)&ti);
+    return t;
+}
+
+static const TbEntry *TbFind(HWND tv, HTREEITEM it)
+{
+    std::wstring win = LowerW(TvText(tv, it));
+    HTREEITEM p = it, top = it;
+    while ((p = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)p)) != nullptr) top = p;
+    std::wstring net = LowerW(TvText(tv, top));
+    const TbEntry *only = nullptr;
+    int cnt = 0;
+    for (auto &e : g_tbe) {
+        if (LowerW(e.win) != win) continue;
+        cnt++;
+        only = &e;
+        if (LowerW(e.net) == net) return &e;
+    }
+    return cnt == 1 ? only : nullptr;                    /* the text alone is enough when only one window has it */
+}
+
+static void DrawBadge(HDC dc, int rowTop, int rowH, int clientRight, int msgs, int ments)
+{
+    if (!g_gdipOk || (msgs <= 0 && ments <= 0)) return;
+    using namespace Gdiplus;
+    int n = ments > 0 ? ments : msgs;
+    wchar_t t[8];
+    if (n > 99) wcscpy_s(t, L"99+");
+    else swprintf(t, 8, L"%d", n);
+    Graphics g(dc);
+    g.SetSmoothingMode(SmoothingModeAntiAlias);
+    g.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+    FontFamily ff(L"Segoe UI");
+    Font f(&ff, 9.0f, FontStyleBold, UnitPixel);
+    RectF m;
+    g.MeasureString(t, -1, &f, PointF(0, 0), &m);
+    float h = (float)min(15, rowH - 3), w = max(h, m.Width + 7.0f);
+    float x = (float)clientRight - w - 6.0f, y = (float)rowTop + ((float)rowH - h) / 2.0f;
+    COLORREF c = ments > 0 ? g_tbHotCol : g_tbMsgCol;
+    GraphicsPath path;
+    float r = h / 2.0f;
+    path.AddArc(x, y, h, h, 90, 180);
+    path.AddArc(x + w - h, y, h, h, 270, 180);
+    path.CloseFigure();
+    SolidBrush br(Color(235, GetRValue(c), GetGValue(c), GetBValue(c)));
+    g.FillPath(&br, &path);
+    StringFormat sf;
+    sf.SetAlignment(StringAlignmentCenter);
+    sf.SetLineAlignment(StringAlignmentCenter);
+    SolidBrush white(Color(255, 255, 255, 255));
+    RectF box(x, y - 0.5f, w, h);
+    g.DrawString(t, -1, &f, box, &sf, &white);
+    (void)r;
+}
+
+static void TbPaint(NMTVCUSTOMDRAW *cd)
+{
+    HTREEITEM it = (HTREEITEM)cd->nmcd.dwItemSpec;
+    const TbEntry *e = it ? TbFind(g_tbTv, it) : nullptr;
+    if (!e) return;
+    g_tbHit++;
+    RECT row = {}, cl = {};
+    *(HTREEITEM *)&row = it;
+    if (!SendMessageW(g_tbTv, TVM_GETITEMRECT, FALSE, (LPARAM)&row)) return;
+    GetClientRect(g_tbTv, &cl);
+    DrawBadge(cd->nmcd.hdc, row.top, row.bottom - row.top, cl.right, e->msgs, e->ments);
+}
+
+static LRESULT CALLBACK BarProc(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR id, DWORD_PTR)
+{
+    if (m == WM_NCDESTROY) {
+        RemoveWindowSubclass(h, BarProc, id);
+        g_tbBar = nullptr;
+    } else if (m == WM_NOTIFY && g_tbOn && l) {
+        NMHDR *nh = (NMHDR *)l;
+        g_tbAny++;
+        if (nh->code == NM_CUSTOMDRAW) g_tbNotify++;
+        if (nh->code == NM_CUSTOMDRAW && nh->hwndFrom == g_tbTv) {
+            LRESULT r = DefSubclassProc(h, m, w, l);
+            NMTVCUSTOMDRAW *cd = (NMTVCUSTOMDRAW *)l;
+            switch (cd->nmcd.dwDrawStage) {
+            case CDDS_PREPAINT:
+                return r | CDRF_NOTIFYITEMDRAW;
+            case CDDS_ITEMPREPAINT:
+                g_tbPre++;
+                if (r & CDRF_SKIPDEFAULT) TbPaint(cd);           /* mIRC drew the item itself (no post-paint is sent then) */
+                return r | CDRF_NOTIFYPOSTPAINT;
+            case CDDS_ITEMPOSTPAINT:
+                g_tbPost++;
+                TbPaint(cd);
+                return r;
+            }
+            return r;
+        }
+    }
+    return DefSubclassProc(h, m, w, l);
+}
+
+static std::wstring TreeBadges(const std::vector<std::wstring> &a)
+{
+    /* treebadge <on> <msg colour> <mention colour> <entry>...   entry = network US window US msgs US mentions  (US = chr 31) */
+    bool on = a.size() > 1 && a[1] == L"1";
+    if (a.size() > 2) g_tbMsgCol = HexColour(a[2], g_tbMsgCol);
+    if (a.size() > 3) g_tbHotCol = HexColour(a[3], g_tbHotCol);
+    g_tbe.clear();
+    for (size_t i = 4; i < a.size() && g_tbe.size() < 60; i++) {
+        std::vector<std::wstring> f = Split(a[i], 31);
+        if (f.size() < 4) continue;
+        TbEntry e;
+        e.net = f[0];
+        e.win = f[1];
+        e.msgs = _wtoi(f[2].c_str());
+        e.ments = _wtoi(f[3].c_str());
+        g_tbe.push_back(e);
+    }
+    g_tbOn = on;
+    HWND tv = FindTreeView();
+    if (!tv) return L"error:no tree bar";
+    g_tbTv = tv;
+    if (on && !g_tbBar) {
+        g_tbBar = GetParent(tv);
+        if (!g_tbBar || !SetWindowSubclass(g_tbBar, BarProc, TB_ID, 0)) { g_tbBar = nullptr; return L"error:hook"; }
+    } else if (!on && g_tbBar) {
+        RemoveWindowSubclass(g_tbBar, BarProc, TB_ID);
+        g_tbBar = nullptr;
+    }
+    InvalidateRect(tv, nullptr, FALSE);
+    return L"ok";
+}
+
+/* ---- window frame colours --------------------------------------------------------------------------------------------
+ * mIRC 7.85 has its own dark mode for menus and the title bar; what it cannot do is match the frame to the NeonScript theme.
+ * Windows 11 lets any window take its caption, caption text and border colours (DWM attributes); scroll bars of the common
+ * controls take the dark Explorer theme.  Applied to mIRC's main window and every other window of the process. */
+struct Chrome {
+    bool on = false, dark = true, scroll = true;
+    COLORREF caption = RGB(0x10, 0x10, 0x18), text = RGB(0xE8, 0xE8, 0xF2), border = RGB(0x2A, 0x2A, 0x3C);
+};
+static Chrome g_chrome;
+static std::set<HWND> g_chromed;
+
+static void ChromeOne(HWND h)
+{
+    if (!IsWindow(h)) return;
+    if (g_chrome.on) {
+        BOOL d = g_chrome.dark ? TRUE : FALSE;
+        DwmSetWindowAttribute(h, 20, &d, sizeof(d));                       /* DWMWA_USE_IMMERSIVE_DARK_MODE */
+        DwmSetWindowAttribute(h, 35, &g_chrome.caption, sizeof(COLORREF));  /* DWMWA_CAPTION_COLOR */
+        DwmSetWindowAttribute(h, 36, &g_chrome.text, sizeof(COLORREF));     /* DWMWA_TEXT_COLOR */
+        DwmSetWindowAttribute(h, 34, &g_chrome.border, sizeof(COLORREF));   /* DWMWA_BORDER_COLOR */
+    } else {
+        COLORREF def = 0xFFFFFFFF;                                          /* DWMWA_COLOR_DEFAULT */
+        DwmSetWindowAttribute(h, 35, &def, sizeof(def));
+        DwmSetWindowAttribute(h, 36, &def, sizeof(def));
+        DwmSetWindowAttribute(h, 34, &def, sizeof(def));
+    }
+}
+
+static BOOL CALLBACK ChromeChildCb(HWND c, LPARAM l)
+{
+    wchar_t cls[48];
+    if (!GetClassNameW(c, cls, 48)) return TRUE;
+    if (!wcscmp(cls, L"SysTreeView32") || !wcscmp(cls, L"ListBox") || !wcscmp(cls, L"ScrollBar") || !wcscmp(cls, L"RICHEDIT50W") ||
+        !wcscmp(cls, L"Edit") || !wcscmp(cls, L"ComboBox"))
+        SetWindowTheme(c, l ? L"DarkMode_Explorer" : L"Explorer", nullptr);
+    return TRUE;
+}
+
+static BOOL CALLBACK ChromeTopCb(HWND h, LPARAM)
+{
+    DWORD pid = 0;
+    GetWindowThreadProcessId(h, &pid);
+    if (pid != GetCurrentProcessId() || !IsWindowVisible(h)) return TRUE;
+    if (g_chromed.count(h)) return TRUE;
+    g_chromed.insert(h);
+    ChromeOne(h);
+    if (g_chrome.on && g_chrome.scroll) EnumChildWindows(h, ChromeChildCb, g_chrome.dark ? 1 : 0);
+    return TRUE;
+}
+
+static void ChromeAll(bool force)
+{
+    if (force) g_chromed.clear();
+    for (auto it = g_chromed.begin(); it != g_chromed.end();) {
+        if (!IsWindow(*it)) it = g_chromed.erase(it);
+        else ++it;
+    }
+    if (!g_chrome.on && !force) return;
+    EnumWindows(ChromeTopCb, 0);
+}
+
+static std::wstring ChromeCfg(const std::vector<std::wstring> &a)
+{
+    bool wasOn = g_chrome.on;
+    g_chrome.on = Opt(a, L"on", L"0") == L"1";
+    g_chrome.dark = Opt(a, L"dark", L"1") != L"0";
+    g_chrome.scroll = Opt(a, L"scroll", L"1") != L"0";
+    g_chrome.caption = HexColour(Opt(a, L"caption"), g_chrome.caption);
+    g_chrome.text = HexColour(Opt(a, L"text"), g_chrome.text);
+    g_chrome.border = HexColour(Opt(a, L"border"), g_chrome.border);
+    if (g_chrome.on || wasOn) ChromeAll(true);
     return L"ok";
 }
 
@@ -1131,6 +1418,10 @@ static std::wstring Run(const std::wstring &in)
         return L"ok";
     }
     if (v == L"menuitem") return PressMenu(a.size() > 1 ? a[1] : L"");
+    if (v == L"treedump") return TreeDump();
+    if (v == L"treebadge") return TreeBadges(a);
+    if (v == L"treestat") { wchar_t b[120]; swprintf(b, 120, L"notify=%d any=%d pre=%d post=%d hit=%d entries=%d bar=%p tv=%p", g_tbNotify, g_tbAny, g_tbPre, g_tbPost, g_tbHit, (int)g_tbe.size(), (void *)g_tbBar, (void *)g_tbTv); return b; }
+    if (v == L"chrome") return ChromeCfg(a);
     if (v == L"menulist") { std::wstring o; HMENU bar = g_mirc ? GetMenu(g_mirc) : nullptr; if (bar) ListMenu(bar, 0, o); else o = L"no menu bar"; return o; }
     if (v == L"nlinfo") return NlInfo();
     if (v == L"nlwidth") {
@@ -1168,6 +1459,8 @@ static void RespondSafe(wchar_t *data, size_t cap)
 
 static void Shutdown()
 {
+    if (g_tbBar) { RemoveWindowSubclass(g_tbBar, BarProc, TB_ID); g_tbBar = nullptr; }
+    if (g_chrome.on) { g_chrome.on = false; ChromeAll(true); }
     PanelShutdown();
     UnhookAll();
     if (g_tb) {

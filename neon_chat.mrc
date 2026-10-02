@@ -122,6 +122,7 @@ alias ns.mi.add {
   hadd ns.mi %n $+($ctime,$chr(9),%net,$chr(9),$1,$chr(9),$2,$chr(9),$3,$chr(9),$iif(%seen,1,0),$chr(9),$left($remove($strip($5-),$chr(9)),300))
   if (%n > 200) hdel ns.mi $calc(%n - 200)
   if (!%seen) && ($window($2)) window -g2 $2
+  if (!%seen) && ($isalias(ns.tbc.ment)) ns.tbc.ment $2
   ns.mi.changed
   if ($isalias(ns.win.notify)) ns.win.notify %n $1 $2 $3 %seen $5-
 }

@@ -2,7 +2,12 @@
 
 Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` in `neon.mrc`.
 
-## 2026.16.0
+## 2026.17.0
+
+* **Tree bar counts** (native helper, Control Panel > Native UI): a red pill with the number of unread mentions - or a blue one with the unread
+  messages - at the right edge of each channel, query and window entry in mIRC's tree bar; looking at the window clears it.
+* **Theme-matched window frames** (native helper): title bar, caption text, border colour and scroll bars of mIRC and its dialogs follow the NeonScript
+  theme (Windows 11; mIRC 7.85's own dark mode keeps handling menus). Switch off with the Native UI checkbox.
 
 * **Log viewer** (`/neon logs`, toolbar Logs button, right-click menus): all of mIRC's logs sorted into categories - by type (channels, private
   messages, status windows, other), by network and by age - with name filter and sort, opened in a coloured window of their own, searched (one log

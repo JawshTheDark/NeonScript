@@ -39,7 +39,7 @@ call "%VCVARS%" >nul
 if errorlevel 1 exit /b 1
 
 pushd "%HERE%"
-cl /nologo /LD /O2 /MT /EHsc /std:c++17 /W3 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /I"%WEBVIEW2_SDK%\build\native\include" neonui.cpp /Fe:neonui.dll /link /DEF:neonui.def /LIBPATH:"%WEBVIEW2_SDK%\build\native\x86" WebView2LoaderStatic.lib user32.lib gdi32.lib gdiplus.lib comctl32.lib ole32.lib oleaut32.lib shell32.lib advapi32.lib dwmapi.lib version.lib shlwapi.lib
+cl /nologo /LD /O2 /MT /EHsc /std:c++17 /W3 /DUNICODE /D_UNICODE /DWIN32_LEAN_AND_MEAN /I"%WEBVIEW2_SDK%\build\native\include" neonui.cpp /Fe:neonui.dll /link /DEF:neonui.def /LIBPATH:"%WEBVIEW2_SDK%\build\native\x86" WebView2LoaderStatic.lib user32.lib gdi32.lib gdiplus.lib comctl32.lib ole32.lib oleaut32.lib shell32.lib advapi32.lib dwmapi.lib version.lib shlwapi.lib uxtheme.lib
 if errorlevel 1 ( popd & exit /b 1 )
 del /q neonui.obj neonui.lib neonui.exp >nul 2>&1
 
