@@ -96,7 +96,11 @@ Right-click any toolbar button for its own menu.
   still paints the nick (colours, away dimming, selection); the helper only adds the icons on the left. A narrow nick list
   drops the avatars first, then the icons, so names never get squeezed.
 * **Taskbar badge** - the number of unread mentions on mIRC's taskbar button.
-* It only touches mIRC's own windows: no network, no files, nothing in the background. `/neon ui off` puts the nick list back.
+* **HTML panels** (WebView2, which ships with Windows 11 and Edge) - small windows with pages from `data\ui`: the **emoji picker**
+  (`/emoji`: search by name, groups, recently used, inserts at the cursor) and a **card** window that shows AI answers with
+  formatting, a Copy button and links that ask before they open (Control Panel > AI helpers > "window of their own").
+  The panels can only load NeonScript's own files; every other address is refused, and what a page sends back is treated as untrusted text.
+* Apart from the panels' WebView2 profile folder (`data\ui\profile`) it touches nothing but mIRC's own windows. `/neon ui off` puts everything back.
 
 ## Fun and extras
 

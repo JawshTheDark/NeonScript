@@ -455,6 +455,7 @@ menu channel {
   .Text effects...:neon fx
   .Symbol map...:neon chars
   .Preview a link...:preview $$?="Link to preview (http:// or https://):"
+  .Emoji picker...:emoji
   AI helpers (opt-in)
   .Catch me up on this channel:ai catchup
   .Look for trouble (suggestions only):ai mod
@@ -473,6 +474,7 @@ menu query {
   .Ignore manager...:neon ignores
   Tools
   .Text effects...:neon fx
+  .Emoji picker...:emoji
   AI helpers (opt-in)
   .Translate the last line...:ai translate $$?="Translate into which language?"
   .AI settings...:ai settings

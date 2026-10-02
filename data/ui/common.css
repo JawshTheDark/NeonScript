@@ -1,0 +1,49 @@
+/* NeonScript HTML panels - shared look.  NeonScript sends the real colours when a panel opens (see common.js). */
+:root {
+  --bg: #101018;
+  --panel: #181824;
+  --fg: #e8e8f2;
+  --dim: #8a8aa4;
+  --accent: #ff2e88;
+  --accent2: #2ee6ff;
+  --border: #2a2a3c;
+  --hover: #24243a;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+input[type=search], input[type=text] {
+  width: 100%;
+  padding: 7px 10px;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  font: inherit;
+  user-select: text;
+}
+input:focus { border-color: var(--accent2); }
+button {
+  font: inherit;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+button:hover { background: var(--hover); border-color: var(--accent2); }
+a { color: var(--accent2); text-decoration: none; cursor: pointer; }
+a:hover { text-decoration: underline; }
+.dim { color: var(--dim); }

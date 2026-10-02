@@ -7,9 +7,10 @@
 
 ; ---------------------------------------------------------------- settings registry
 ; id -> section;item;default;type[;values]   (default _ = empty: $gettok skips empty tokens)     types: c check, e edit, m multi-edit, s combo
-alias -l opt.ids return 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
+alias -l opt.ids return 1316 1401 1402 1403 1404 1301 1303 1305 1307 1310 1311 1012 316 416 412 413 1201 1202 1203 1205 1206 1208 1210 1212 1214 1215 1102 1105 1106 1108 1110 1111 1112 1001 1002 1003 1004 1005 1006 1007 1008 1009 101 102 103 104 105 107 201 202 203 205 206 208 301 302 303 304 305 306 307 308 401 402 403 404 501 502 504 506 507 508 509 510 511 512 513 601 602 603 604 606 607 608 701 703 705 707 801
 alias -l reg {
   var %i = $1
+  if (%i == 1316) return ai;panel;0;c
   if (%i == 1401) return ui;on;0;c
   if (%i == 1402) return ui;nlrank;1;c
   if (%i == 1403) return ui;nlavatar;1;c
@@ -296,10 +297,11 @@ dialog ns_opt {
   edit "", 1309, 124 108 150 11, pass
   check "Ask me before anything is sent, and show exactly what", 1310, 92 124 250 9
   check "Replace nicknames by User1, User2 ... in the chat that is sent", 1311, 92 137 250 9
-  text "With Ollama the text stays on your PC or network. Any other service receives what you send, under its own terms. Nothing is ever sent in the background, and a key is stored protected and never put in a backup.", 1312, 92 152 250 27
-  button "Test connection", 1313, 92 184 70 12
-  button "Get Ollama...", 1314, 166 184 60 12
-  button "Command help", 1315, 230 184 60 12
+  check "Show answers in a window of their own (needs the native helper)", 1316, 92 150 250 9
+  text "With Ollama the text stays on your PC or network. Any other service receives what you send, under its own terms. Nothing is sent in the background; the key is never put in a backup.", 1312, 92 163 250 24
+  button "Test connection", 1313, 92 192 70 12
+  button "Get Ollama...", 1314, 166 192 60 12
+  button "Command help", 1315, 230 192 60 12
 
   ; ---- page 13 : Native UI helper  (ids 1400-1499)
   box "Native UI helper (optional)", 1400, 82 38 266 172
@@ -310,6 +312,7 @@ dialog ns_opt {
   text "", 1405, 92 112 250 36
   text "neonui.dll is a small open-source helper (source in the native folder, MIT licence). It only touches mIRC's own windows, never opens a network connection and is never loaded when this is off.", 1406, 92 152 250 27
   button "Check helper", 1407, 92 184 70 12
+  button "Emoji picker", 1408, 166 184 60 12
 
   ; ---- page 8 : Advanced
   box "Advanced", 800, 82 38 266 172
@@ -468,6 +471,7 @@ on *:DIALOG:ns_opt:sclick:1113:{ neon ignores }
 on *:DIALOG:ns_opt:sclick:1216:{ optsave | neon toast test }
 on *:DIALOG:ns_opt:sclick:1217:{ optsave | neon speak test }
 on *:DIALOG:ns_opt:sclick:1218:{ optsave | neon speak voices }
+on *:DIALOG:ns_opt:sclick:1408:{ optsave | ns.later emoji }
 on *:DIALOG:ns_opt:sclick:1407:{ optsave | did -ra ns_opt 1405 $ns.ui.statustext }
 on *:DIALOG:ns_opt:sclick:1313:{ optsave | ns.later ai test }
 on *:DIALOG:ns_opt:sclick:1314:{ run https://ollama.com/download }

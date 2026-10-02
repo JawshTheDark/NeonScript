@@ -56,3 +56,4 @@ desktop.ini
 /native/*.obj
 /native/*.lib
 /native/*.exp
+/data/ui/profile/

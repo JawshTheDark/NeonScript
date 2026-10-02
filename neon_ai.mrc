@@ -348,6 +348,11 @@ alias ns.ai.done {
 ; the answer as a framed card in the window the command was run in (title in %ns.ai.title)
 alias ns.ai.card {
   var %text = $ns.ai.deanon($1-), %w = %ns.ai.win
+  ; with the native helper and Control Panel > AI helpers > "window of their own", show a rendered card instead
+  if ($ns.flag(ai,panel,0)) && ($isalias(ns.ui.card)) && ($ns.ui.card(%ns.ai.title,%text)) {
+    ns.ai.cleanup
+    return
+  }
   if (%w != $null) && ($window(%w)) set -u2 %ns.card.win %w
   ns.card $+(%ns.ai.title,$chr(1),$ns.ai.wrap(76,%text))
   ns.ai.cleanup

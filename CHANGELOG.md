@@ -7,6 +7,9 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 * **Native UI helper** (`neonui.dll`, source in `native/`, off by default - Control Panel > Native UI or `/neon ui on`): rank icons
   and coloured-initial avatars in the nick list, an unread-mentions badge on the taskbar button. Verified by SHA-256 before it is
   loaded; only touches mIRC's own windows. `/neon ui status` shows its state, the self-test checks it.
+* **HTML panels** through WebView2 (`neonui.dll` 1.1): `/emoji` picker and a card window for AI answers
+  (`ai panel` setting). Panels load only `data\ui` files; links, new windows, downloads and permission requests are handled by NeonScript or refused.
+  `tools/make_emoji.py` regenerates the emoji list.
 * Two prompts with literal commas in `$input` (restore backup, restore original look) no longer lose their buttons.
 
 ## 2026.12.0

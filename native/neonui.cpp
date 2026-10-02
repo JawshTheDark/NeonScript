@@ -23,6 +23,12 @@
 using std::min;
 using std::max;
 #include <objidl.h>
+#include <dwmapi.h>
+#include <wrl.h>
+#include <WebView2.h>
+#include <deque>
+#include <memory>
+#include <mutex>
 #include <gdiplus.h>
 #include <commctrl.h>
 #include <shobjidl.h>
@@ -33,7 +39,7 @@ using std::max;
 #include <string>
 #include <vector>
 
-#define NEONUI_VERSION L"neonui 1.0"
+#define NEONUI_VERSION L"neonui 1.1"
 
 typedef struct {
     DWORD mVersion;
@@ -407,6 +413,435 @@ static std::wstring Progress(const std::wstring &state, int pct)
     return L"ok";
 }
 
+/* ===================================================================================== panels (WebView2)
+ * HTML panels (emoji picker, rich cards ...) shown in small windows of their own.  Everything runs on one helper thread
+ * (apartment threaded, with a message loop) so mIRC's own thread is never blocked: the exported commands only queue work and
+ * return.  Pages come from NeonScript's data\ui folder, mapped to https://neon.local/ - nothing else may be loaded: any other
+ * navigation is cancelled (links are handed to NeonScript as events instead), new windows, downloads and permission
+ * requests are refused.  What a page sends with chrome.webview.postMessage() is queued as text; NeonScript fetches it with
+ * "wvpoll" and treats it as untrusted data.
+ */
+using Microsoft::WRL::Callback;
+using Microsoft::WRL::ComPtr;
+
+static std::mutex g_mx;                                  /* guards the two queues below */
+static std::deque<std::wstring> g_cmds;                  /* mIRC thread -> panel thread: "verb<TAB>args" */
+static std::deque<std::wstring> g_events;                /* panel thread -> mIRC:  "panel<TAB>kind<TAB>text" */
+static HANDLE g_thread = nullptr;
+static DWORD g_threadId = 0;
+static HANDLE g_threadUp = nullptr;
+static std::wstring g_userData, g_uiDir;
+static bool g_testJs = false;                            /* wveval only works when NEONUI_TEST is set in the environment */
+
+struct Panel {
+    std::wstring name;
+    HWND hwnd = nullptr;
+    ComPtr<ICoreWebView2Controller> ctl;
+    ComPtr<ICoreWebView2> wv;
+    std::wstring page;
+    std::vector<std::wstring> pending;                  /* posts that arrived before the page was ready */
+    COLORREF bg = RGB(16, 16, 24);
+    bool debug = false;
+    bool loaded = false;
+};
+static std::map<std::wstring, std::shared_ptr<Panel>> g_panels;      /* panel thread only */
+static ComPtr<ICoreWebView2Environment> g_env;
+static bool g_envAsked = false, g_envFailed = false;
+static const wchar_t *PANEL_CLASS = L"NeonUiPanel";
+static const wchar_t *HOST = L"neon.local";
+static const UINT WM_NU_WORK = WM_APP + 1;
+
+static void PushEvent(const std::wstring &panel, const wchar_t *kind, const std::wstring &text)
+{
+    std::wstring t = text.size() > 3000 ? text.substr(0, 3000) : text;
+    for (auto &c : t)
+        if (c == L'\t' || c == L'\r' || c == L'\n') c = L' ';
+    std::lock_guard<std::mutex> lk(g_mx);
+    if (g_events.size() < 500) g_events.push_back(panel + L"\t" + kind + L"\t" + t);
+}
+
+static std::wstring Hr(HRESULT hr)
+{
+    wchar_t b[24];
+    swprintf(b, 24, L"0x%08X", (unsigned)hr);
+    return b;
+}
+
+static void ApplyDark(HWND h, bool dark)
+{
+    BOOL v = dark ? TRUE : FALSE;
+    DwmSetWindowAttribute(h, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &v, sizeof(v));
+}
+
+static void FitPanel(Panel &p)
+{
+    if (!p.ctl || !p.hwnd) return;
+    RECT rc;
+    GetClientRect(p.hwnd, &rc);
+    p.ctl->put_Bounds(rc);
+}
+
+static LRESULT CALLBACK PanelProc(HWND h, UINT m, WPARAM w, LPARAM l)
+{
+    Panel *p = (Panel *)GetWindowLongPtrW(h, GWLP_USERDATA);
+    switch (m) {
+    case WM_NCCREATE:
+        SetWindowLongPtrW(h, GWLP_USERDATA, (LONG_PTR)((CREATESTRUCTW *)l)->lpCreateParams);
+        break;
+    case WM_SIZE:
+        if (p) FitPanel(*p);
+        return 0;
+    case WM_ERASEBKGND:
+        if (p && !p->loaded) {                          /* no white flash while the page loads */
+            HBRUSH b = CreateSolidBrush(p->bg);
+            RECT rc;
+            GetClientRect(h, &rc);
+            FillRect((HDC)w, &rc, b);
+            DeleteObject(b);
+        }
+        return 1;
+    case WM_CLOSE:
+        if (p) {
+            std::wstring name = p->name;
+            std::shared_ptr<Panel> keep = g_panels[name];     /* keep the panel alive while its window goes away */
+            PushEvent(name, L"closed", L"");
+            if (keep && keep->ctl) keep->ctl->Close();
+            g_panels.erase(name);
+            SetWindowLongPtrW(h, GWLP_USERDATA, 0);
+            DestroyWindow(h);
+        } else {
+            DestroyWindow(h);
+        }
+        return 0;
+    }
+    return DefWindowProcW(h, m, w, l);
+}
+
+static void SetupPanel(const std::shared_ptr<Panel> &p)
+{
+    ComPtr<ICoreWebView2Settings> st;
+    if (SUCCEEDED(p->wv->get_Settings(&st)) && st) {
+        st->put_AreDefaultContextMenusEnabled(p->debug ? TRUE : FALSE);
+        st->put_AreDevToolsEnabled(p->debug ? TRUE : FALSE);
+        st->put_AreDefaultScriptDialogsEnabled(FALSE);
+        st->put_IsStatusBarEnabled(FALSE);
+        st->put_IsZoomControlEnabled(FALSE);
+        st->put_IsBuiltInErrorPageEnabled(FALSE);
+        ComPtr<ICoreWebView2Settings3> s3;
+        if (SUCCEEDED(st.As(&s3))) s3->put_AreBrowserAcceleratorKeysEnabled(p->debug ? TRUE : FALSE);
+        ComPtr<ICoreWebView2Settings4> s4;
+        if (SUCCEEDED(st.As(&s4))) {
+            s4->put_IsPasswordAutosaveEnabled(FALSE);
+            s4->put_IsGeneralAutofillEnabled(FALSE);
+        }
+    }
+    ComPtr<ICoreWebView2Controller2> c2;
+    if (SUCCEEDED(p->ctl.As(&c2))) {
+        COREWEBVIEW2_COLOR col = { 255, GetRValue(p->bg), GetGValue(p->bg), GetBValue(p->bg) };
+        c2->put_DefaultBackgroundColor(col);
+    }
+    ComPtr<ICoreWebView2_3> w3;
+    if (SUCCEEDED(p->wv.As(&w3)))
+        w3->SetVirtualHostNameToFolderMapping(HOST, g_uiDir.c_str(), COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_DENY_CORS);
+
+    std::weak_ptr<Panel> wp = p;
+    EventRegistrationToken tok;
+    p->wv->add_NavigationStarting(Callback<ICoreWebView2NavigationStartingEventHandler>(
+        [wp](ICoreWebView2 *, ICoreWebView2NavigationStartingEventArgs *a) -> HRESULT {
+            auto p = wp.lock();
+            LPWSTR uri = nullptr;
+            a->get_Uri(&uri);
+            std::wstring u = uri ? uri : L"";
+            if (uri) CoTaskMemFree(uri);
+            if (u.compare(0, 19, L"https://neon.local/") != 0 && u != L"about:blank") {
+                a->put_Cancel(TRUE);
+                if (p && (u.compare(0, 7, L"http://") == 0 || u.compare(0, 8, L"https://") == 0)) PushEvent(p->name, L"link", u);
+            }
+            return S_OK;
+        }).Get(), &tok);
+    p->wv->add_NewWindowRequested(Callback<ICoreWebView2NewWindowRequestedEventHandler>(
+        [wp](ICoreWebView2 *, ICoreWebView2NewWindowRequestedEventArgs *a) -> HRESULT {
+            a->put_Handled(TRUE);
+            auto p = wp.lock();
+            LPWSTR uri = nullptr;
+            a->get_Uri(&uri);
+            if (p && uri) PushEvent(p->name, L"link", uri);
+            if (uri) CoTaskMemFree(uri);
+            return S_OK;
+        }).Get(), &tok);
+    p->wv->add_WebMessageReceived(Callback<ICoreWebView2WebMessageReceivedEventHandler>(
+        [wp](ICoreWebView2 *, ICoreWebView2WebMessageReceivedEventArgs *a) -> HRESULT {
+            auto p = wp.lock();
+            LPWSTR s = nullptr;
+            if (p && SUCCEEDED(a->TryGetWebMessageAsString(&s)) && s) PushEvent(p->name, L"msg", s);
+            if (s) CoTaskMemFree(s);
+            return S_OK;
+        }).Get(), &tok);
+    p->wv->add_PermissionRequested(Callback<ICoreWebView2PermissionRequestedEventHandler>(
+        [](ICoreWebView2 *, ICoreWebView2PermissionRequestedEventArgs *a) -> HRESULT {
+            a->put_State(COREWEBVIEW2_PERMISSION_STATE_DENY);
+            return S_OK;
+        }).Get(), &tok);
+    ComPtr<ICoreWebView2_4> w4;
+    if (SUCCEEDED(p->wv.As(&w4)))
+        w4->add_DownloadStarting(Callback<ICoreWebView2DownloadStartingEventHandler>(
+            [](ICoreWebView2 *, ICoreWebView2DownloadStartingEventArgs *a) -> HRESULT {
+                a->put_Cancel(TRUE);
+                return S_OK;
+            }).Get(), &tok);
+    p->wv->add_NavigationCompleted(Callback<ICoreWebView2NavigationCompletedEventHandler>(
+        [wp](ICoreWebView2 *, ICoreWebView2NavigationCompletedEventArgs *a) -> HRESULT {
+            auto p = wp.lock();
+            if (!p) return S_OK;
+            BOOL ok = FALSE;
+            a->get_IsSuccess(&ok);
+            if (!p->loaded && ok) {
+                p->loaded = true;
+                for (auto &t : p->pending) p->wv->PostWebMessageAsString(t.c_str());
+                p->pending.clear();
+            }
+            PushEvent(p->name, ok ? L"loaded" : L"loadfailed", p->page);
+            return S_OK;
+        }).Get(), &tok);
+
+    FitPanel(*p);
+    p->ctl->put_IsVisible(TRUE);
+    std::wstring url = std::wstring(L"https://") + HOST + L"/" + p->page;
+    p->wv->Navigate(url.c_str());
+}
+
+static void StartController(const std::shared_ptr<Panel> &p)
+{
+    std::weak_ptr<Panel> wp = p;
+    HRESULT hr = g_env->CreateCoreWebView2Controller(p->hwnd, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+        [wp](HRESULT r, ICoreWebView2Controller *c) -> HRESULT {
+            auto p = wp.lock();
+            if (!p) {
+                if (c) c->Close();
+                return S_OK;
+            }
+            if (FAILED(r) || !c) {
+                PushEvent(p->name, L"error", L"controller " + Hr(r));
+                return S_OK;
+            }
+            p->ctl = c;
+            c->get_CoreWebView2(&p->wv);
+            if (!p->wv) {
+                PushEvent(p->name, L"error", L"no core");
+                return S_OK;
+            }
+            SetupPanel(p);
+            return S_OK;
+        }).Get());
+    if (FAILED(hr)) PushEvent(p->name, L"error", L"controller " + Hr(hr));
+}
+
+static void EnsureEnv()
+{
+    if (g_env || g_envAsked) return;
+    g_envAsked = true;
+    HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(nullptr, g_userData.c_str(), nullptr,
+        Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+            [](HRESULT r, ICoreWebView2Environment *env) -> HRESULT {
+                if (FAILED(r) || !env) {
+                    g_envFailed = true;
+                    PushEvent(L"*", L"error", L"environment " + Hr(r));
+                    return S_OK;
+                }
+                g_env = env;
+                std::vector<std::shared_ptr<Panel>> todo;
+                for (auto &kv : g_panels)
+                    if (!kv.second->ctl) todo.push_back(kv.second);
+                for (auto &p : todo) StartController(p);
+                return S_OK;
+            }).Get());
+    if (FAILED(hr)) {
+        g_envFailed = true;
+        PushEvent(L"*", L"error", L"environment " + Hr(hr));
+    }
+}
+
+static void OpenPanel(const std::vector<std::wstring> &a)
+{
+    /* wvopen <name> <page> <width> <height> <title> <flags> */
+    if (a.size() < 7) return;
+    const std::wstring &name = a[1];
+    auto it = g_panels.find(name);
+    if (it != g_panels.end()) {                          /* already open: bring it forward */
+        ShowWindow(it->second->hwnd, SW_SHOWNORMAL);
+        SetForegroundWindow(it->second->hwnd);
+        return;
+    }
+    if (g_envFailed) {
+        PushEvent(name, L"error", L"the WebView2 runtime is not available");
+        return;
+    }
+    auto p = std::make_shared<Panel>();
+    p->name = name;
+    p->page = a[2];
+    int w = max(240, min(1400, _wtoi(a[3].c_str()))), h = max(160, min(1000, _wtoi(a[4].c_str())));
+    const std::wstring &fl = a[6];
+    p->debug = fl.find(L"debug") != std::wstring::npos;
+    size_t bp = fl.find(L"bg=");
+    if (bp != std::wstring::npos && fl.size() >= bp + 9) p->bg = HexColour(fl.substr(bp + 3, 6), p->bg);
+    bool dark = fl.find(L"dark") != std::wstring::npos;
+    RECT mr = { 100, 100, 900, 700 };
+    if (g_mirc) GetWindowRect(g_mirc, &mr);
+    int x = mr.left + max(0, (int)((mr.right - mr.left) - w) / 2), y = mr.top + max(0, (int)((mr.bottom - mr.top) - h) / 3);
+    DWORD ex = (fl.find(L"top") != std::wstring::npos) ? WS_EX_TOPMOST : 0;
+    HWND hw = CreateWindowExW(ex, PANEL_CLASS, a[5].c_str(), WS_OVERLAPPEDWINDOW, x, y, w, h, nullptr, nullptr, g_self, p.get());
+    if (!hw) {
+        PushEvent(name, L"error", L"window " + Hr(HRESULT_FROM_WIN32(GetLastError())));
+        return;
+    }
+    p->hwnd = hw;
+    ApplyDark(hw, dark);
+    g_panels[name] = p;
+    ShowWindow(hw, SW_SHOWNORMAL);
+    UpdateWindow(hw);
+    EnsureEnv();
+    if (g_env) StartController(p);
+}
+
+static void DoCommand(const std::wstring &cmd)
+{
+    std::vector<std::wstring> a = Split(cmd, L'\t');
+    const std::wstring &v = a[0];
+    if (v == L"wvopen") {
+        OpenPanel(a);
+        return;
+    }
+    if (v == L"wvcloseall") {
+        std::vector<HWND> all;
+        for (auto &kv : g_panels) all.push_back(kv.second->hwnd);
+        for (HWND h : all) PostMessageW(h, WM_CLOSE, 0, 0);
+        return;
+    }
+    if (a.size() < 2) return;
+    auto it = g_panels.find(a[1]);
+    if (it == g_panels.end()) return;
+    std::shared_ptr<Panel> p = it->second;
+    std::wstring rest;                                   /* everything after the second TAB (text may contain TABs) */
+    {
+        size_t t1 = cmd.find(L'\t');
+        size_t t2 = t1 == std::wstring::npos ? t1 : cmd.find(L'\t', t1 + 1);
+        if (t2 != std::wstring::npos) rest = cmd.substr(t2 + 1);
+    }
+    if (v == L"wvclose") {
+        PostMessageW(p->hwnd, WM_CLOSE, 0, 0);
+    } else if (v == L"wvpost" && a.size() > 2) {
+        if (p->loaded && p->wv) p->wv->PostWebMessageAsString(rest.c_str());
+        else if (p->pending.size() < 20) p->pending.push_back(rest);
+    } else if (v == L"wvtitle" && a.size() > 2) {
+        SetWindowTextW(p->hwnd, rest.c_str());
+    } else if (v == L"wveval" && a.size() > 2 && g_testJs && p->wv) {
+        std::wstring name = p->name;
+        p->wv->ExecuteScript(rest.c_str(), Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
+            [name](HRESULT r, LPCWSTR res) -> HRESULT {
+                PushEvent(name, L"eval", FAILED(r) ? L"error " + Hr(r) : std::wstring(res ? res : L""));
+                return S_OK;
+            }).Get());
+    }
+}
+
+static DWORD WINAPI PanelThread(LPVOID)
+{
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    WNDCLASSEXW wc = { sizeof(wc) };
+    wc.lpfnWndProc = PanelProc;
+    wc.hInstance = g_self;
+    wc.lpszClassName = PANEL_CLASS;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    RegisterClassExW(&wc);
+    MSG msg;
+    PeekMessageW(&msg, nullptr, WM_USER, WM_USER, PM_NOREMOVE);      /* creates this thread's message queue */
+    SetEvent(g_threadUp);
+    while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
+        if (msg.hwnd == nullptr && msg.message == WM_NU_WORK) {
+            for (;;) {
+                std::wstring c;
+                {
+                    std::lock_guard<std::mutex> lk(g_mx);
+                    if (g_cmds.empty()) break;
+                    c = g_cmds.front();
+                    g_cmds.pop_front();
+                }
+                try {
+                    DoCommand(c);
+                } catch (...) {
+                }
+            }
+            continue;
+        }
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    for (auto &kv : g_panels) {
+        if (kv.second->ctl) kv.second->ctl->Close();
+        if (kv.second->hwnd) DestroyWindow(kv.second->hwnd);
+    }
+    g_panels.clear();
+    g_env.Reset();
+    UnregisterClassW(PANEL_CLASS, g_self);
+    CoUninitialize();
+    return 0;
+}
+
+static std::wstring PanelInit(const std::vector<std::wstring> &a)
+{
+    /* wvinit <user data folder> <ui folder> */
+    if (a.size() < 3) return L"error:arguments";
+    LPWSTR ver = nullptr;
+    HRESULT hr = GetAvailableCoreWebView2BrowserVersionString(nullptr, &ver);
+    if (FAILED(hr) || !ver) return L"error:no WebView2 runtime";
+    std::wstring v = ver;
+    CoTaskMemFree(ver);
+    if (!g_thread) {
+        g_userData = a[1];
+        g_uiDir = a[2];
+        wchar_t env[8];
+        g_testJs = GetEnvironmentVariableW(L"NEONUI_TEST", env, 8) > 0;
+        g_threadUp = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        g_thread = CreateThread(nullptr, 0, PanelThread, nullptr, 0, &g_threadId);
+        if (!g_thread) return L"error:thread";
+        WaitForSingleObject(g_threadUp, 5000);
+    }
+    return L"ok " + v;
+}
+
+static void QueueCommand(const std::wstring &c)
+{
+    if (!g_thread) return;
+    {
+        std::lock_guard<std::mutex> lk(g_mx);
+        if (g_cmds.size() < 200) g_cmds.push_back(c);
+    }
+    PostThreadMessageW(g_threadId, WM_NU_WORK, 0, 0);
+}
+
+static std::wstring PollEvent()
+{
+    std::lock_guard<std::mutex> lk(g_mx);
+    if (g_events.empty()) return L"";
+    std::wstring e = g_events.front();
+    g_events.pop_front();
+    return e;
+}
+
+static void PanelShutdown()
+{
+    if (!g_thread) return;
+    PostThreadMessageW(g_threadId, WM_QUIT, 0, 0);
+    WaitForSingleObject(g_thread, 4000);
+    CloseHandle(g_thread);
+    g_thread = nullptr;
+    if (g_threadUp) {
+        CloseHandle(g_threadUp);
+        g_threadUp = nullptr;
+    }
+}
+
 /* ===================================================================================== commands */
 static std::wstring Run(const std::wstring &in)
 {
@@ -420,6 +855,13 @@ static std::wstring Run(const std::wstring &in)
         for (int i = 0; i < 5; i++) g_cfg.rankCol[i] = HexColour(Opt(a, keys[i]), g_cfg.rankCol[i]);
         if (!g_cfg.rank && !g_cfg.avatar) UnhookAll();
         else { NickScan(); Repaint(); }
+        return L"ok";
+    }
+    if (v == L"wvinit") return PanelInit(a);
+    if (v == L"wvpoll") return PollEvent();
+    if (v == L"wvopen" || v == L"wvpost" || v == L"wvclose" || v == L"wvcloseall" || v == L"wvtitle" || v == L"wveval") {
+        if (!g_thread) return L"error:not initialised";
+        QueueCommand(in);
         return L"ok";
     }
     if (v == L"nlscan") return std::to_wstring(NickScan());
@@ -451,6 +893,7 @@ static void RespondSafe(wchar_t *data, size_t cap)
 
 static void Shutdown()
 {
+    PanelShutdown();
     UnhookAll();
     if (g_tb) {
         g_tb->SetOverlayIcon(g_mirc, nullptr, L"");

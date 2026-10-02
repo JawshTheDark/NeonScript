@@ -1,0 +1,49 @@
+#top { padding: 10px 10px 4px; background: var(--bg); }
+#tabs { display: flex; gap: 2px; margin-top: 8px; border-bottom: 1px solid var(--border); }
+#tabs .tab {
+  flex: 1;
+  text-align: center;
+  padding: 4px 0 6px;
+  font-size: 18px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+#tabs .tab:hover { background: var(--hover); }
+#tabs .tab.on { border-bottom-color: var(--accent); background: var(--panel); }
+#grid {
+  position: absolute;
+  top: 88px;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+#grid h3 { margin: 8px 4px 4px; font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+#grid .row { display: flex; flex-wrap: wrap; }
+#grid .e {
+  width: 38px;
+  height: 38px;
+  line-height: 38px;
+  text-align: center;
+  font-size: 24px;
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  border-radius: 8px;
+  cursor: pointer;
+}
+#grid .e:hover { background: var(--hover); outline: 1px solid var(--accent2); }
+#foot {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  padding: 5px 12px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#empty { padding: 30px; text-align: center; color: var(--dim); }
