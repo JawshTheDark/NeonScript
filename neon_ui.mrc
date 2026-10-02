@@ -102,6 +102,8 @@ alias ns.tbc.clear {
 }
 on *:ACTIVE:*:{ if ($appactive) ns.tbc.clear $active }
 alias ns.tbc.tick { if ($appactive) && ($hget(ns.tbc)) ns.tbc.clear $active }
+; 1 when mIRC itself shows this window in its highlight colour (its own highlight rules matched, not only NeonScript's mention words)
+alias ns.tbc.sb hadd -m ns.tbhl $+($cid,.,$1) $iif($window($1).sbcolor == highlight,1,0)
 alias ns.tbc.push {
   var %t = $ns.ui.tab, %on = $ns.tbc.on, %n, %i = 1, %k, %cid, %win, %v, %j, %lab, %list, %c = 0
   if (!$ns.ui.active) return
@@ -120,7 +122,8 @@ alias ns.tbc.push {
         inc %j
       }
       if (%lab == $null) continue
-      %list = $+(%list,%t,%lab,$chr(31),%win,$chr(31),$gettok(%v,1,32),$chr(31),$gettok(%v,2,32))
+      scid %cid ns.tbc.sb %win
+      %list = $+(%list,%t,%lab,$chr(31),%win,$chr(31),$gettok(%v,1,32),$chr(31),$gettok(%v,2,32),$chr(31),$hget(ns.tbhl,$+(%cid,.,%win)))
       inc %c
     }
   }

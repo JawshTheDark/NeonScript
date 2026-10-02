@@ -4,6 +4,10 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 
 ## 2026.17.0
 
+* **Frames only**: the theme tint is applied to windows with a title bar only - pop-up menus no longer get a coloured border at random.
+* **Tree bar pills** turn red for a window mIRC itself shows in its highlight colour (its own highlight words), not only for NeonScript's mention words.
+* **Commands menu** (menu bar) gained the newer tools: Mentions inbox, Log viewer, Ignore manager, Emoji picker, Dictate, AI helpers, Native UI helper, Settings sync.
+
 * **Tree bar counts** (native helper, Control Panel > Native UI): a red pill with the number of unread mentions - or a blue one with the unread
   messages - at the right edge of each channel, query and window entry in mIRC's tree bar; looking at the window clears it.
 * **Theme-matched window frames** (native helper): title bar, caption text, border colour and scroll bars of mIRC and its dialogs follow the NeonScript

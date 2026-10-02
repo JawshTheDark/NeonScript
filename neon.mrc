@@ -323,17 +323,30 @@ menu menubar {
   Themes...:neon themes
   -
   Dashboard:neon dash
+  Mentions inbox...:neon mentions
+  Log viewer...:neon logs
   Set away...:neon away
   Do not disturb:neon dnd
   -
   Text effects...:neon fx
   Symbol map...:neon chars
+  Emoji picker...:emoji
+  Dictate (speech to text):dictate
   Kick && ban...:neon kb
   Clone scanner:neon clones
   Userlist...:neon users
+  Ignore manager...:neon ignores
   Messages...:neon messages
   Hotkeys...:neon hotkeys
   Sounds...:neon sounds
+  -
+  AI helpers (opt-in)
+  .Catch me up on this window:ai catchup
+  .Summarise my unread mentions:ai mentions
+  .Ask a question...:ai ask $$?="Question for the AI service:"
+  .AI settings...:ai settings
+  Native UI helper...:neon options native
+  Settings sync...:neon options sync
   -
   Command reference:neonhelp
   About NeonScript:neon about

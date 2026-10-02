@@ -642,6 +642,7 @@ static std::wstring TreeDump()
 struct TbEntry {
     std::wstring net, win;
     int msgs = 0, ments = 0;
+    bool hot = false;                                   /* mIRC shows the window in its highlight colour */
 };
 static std::vector<TbEntry> g_tbe;
 static bool g_tbOn = false;
@@ -685,7 +686,7 @@ static const TbEntry *TbFind(HWND tv, HTREEITEM it)
     return cnt == 1 ? only : nullptr;                    /* the text alone is enough when only one window has it */
 }
 
-static void DrawBadge(HDC dc, int rowTop, int rowH, int clientRight, int msgs, int ments)
+static void DrawBadge(HDC dc, int rowTop, int rowH, int clientRight, int msgs, int ments, bool hot)
 {
     if (!g_gdipOk || (msgs <= 0 && ments <= 0)) return;
     using namespace Gdiplus;
@@ -702,7 +703,7 @@ static void DrawBadge(HDC dc, int rowTop, int rowH, int clientRight, int msgs, i
     g.MeasureString(t, -1, &f, PointF(0, 0), &m);
     float h = (float)min(15, rowH - 3), w = max(h, m.Width + 7.0f);
     float x = (float)clientRight - w - 6.0f, y = (float)rowTop + ((float)rowH - h) / 2.0f;
-    COLORREF c = ments > 0 ? g_tbHotCol : g_tbMsgCol;
+    COLORREF c = (ments > 0 || hot) ? g_tbHotCol : g_tbMsgCol;
     GraphicsPath path;
     float r = h / 2.0f;
     path.AddArc(x, y, h, h, 90, 180);
@@ -729,7 +730,7 @@ static void TbPaint(NMTVCUSTOMDRAW *cd)
     *(HTREEITEM *)&row = it;
     if (!SendMessageW(g_tbTv, TVM_GETITEMRECT, FALSE, (LPARAM)&row)) return;
     GetClientRect(g_tbTv, &cl);
-    DrawBadge(cd->nmcd.hdc, row.top, row.bottom - row.top, cl.right, e->msgs, e->ments);
+    DrawBadge(cd->nmcd.hdc, row.top, row.bottom - row.top, cl.right, e->msgs, e->ments, e->hot);
 }
 
 static LRESULT CALLBACK BarProc(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR id, DWORD_PTR)
@@ -764,7 +765,7 @@ static LRESULT CALLBACK BarProc(HWND h, UINT m, WPARAM w, LPARAM l, UINT_PTR id,
 
 static std::wstring TreeBadges(const std::vector<std::wstring> &a)
 {
-    /* treebadge <on> <msg colour> <mention colour> <entry>...   entry = network US window US msgs US mentions  (US = chr 31) */
+    /* treebadge <on> <msg colour> <mention colour> <entry>...   entry = network US window US msgs US mentions US hot  (US = chr 31) */
     bool on = a.size() > 1 && a[1] == L"1";
     if (a.size() > 2) g_tbMsgCol = HexColour(a[2], g_tbMsgCol);
     if (a.size() > 3) g_tbHotCol = HexColour(a[3], g_tbHotCol);
@@ -777,6 +778,7 @@ static std::wstring TreeBadges(const std::vector<std::wstring> &a)
         e.win = f[1];
         e.msgs = _wtoi(f[2].c_str());
         e.ments = _wtoi(f[3].c_str());
+        e.hot = f.size() > 4 && f[4] == L"1";
         g_tbe.push_back(e);
     }
     g_tbOn = on;
@@ -837,6 +839,7 @@ static BOOL CALLBACK ChromeTopCb(HWND h, LPARAM)
     DWORD pid = 0;
     GetWindowThreadProcessId(h, &pid);
     if (pid != GetCurrentProcessId() || !IsWindowVisible(h)) return TRUE;
+    if ((GetWindowLongW(h, GWL_STYLE) & WS_CAPTION) != WS_CAPTION) return TRUE;      /* popup menus, tooltips ... have no title bar */
     if (g_chromed.count(h)) return TRUE;
     g_chromed.insert(h);
     ChromeOne(h);
