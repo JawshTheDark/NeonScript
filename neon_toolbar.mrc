@@ -280,7 +280,7 @@ alias ns.tb.click {
   if (%n == protect) { neon options protect | return }
   if (%n == access) { neon users | return }
   if (%n == dcc) { dcc send $$?="Send a file to:" | return }
-  if (%n == logs) { run explorer $qt($logdir) | return }
+  if (%n == logs) { neon logs | return }
   if (%n == options) { neon options | return }
   if (%n == help) { neonhelp | return }
 }

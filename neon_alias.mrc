@@ -458,6 +458,10 @@ menu channel {
   .Preview a link...:preview $$?="Link to preview (http:// or https://):"
   .Emoji picker...:emoji
   .Dictate (speech to text):dictate
+  Logs
+  .This channel's log:neon logs here
+  .Log viewer...:neon logs
+  .Search all logs...:neon logs search $$?="Search every log for:"
   AI helpers (opt-in)
   .Catch me up on this channel:ai catchup
   .Look for trouble (suggestions only):ai mod
@@ -478,6 +482,9 @@ menu query {
   .Text effects...:neon fx
   .Emoji picker...:emoji
   .Dictate (speech to text):dictate
+  Logs
+  .This conversation's log:neon logs here
+  .Log viewer...:neon logs
   AI helpers (opt-in)
   .Translate the last line...:ai translate $$?="Translate into which language?"
   .AI settings...:ai settings
@@ -501,6 +508,9 @@ menu status {
   .Summarise my unread mentions:ai mentions
   .Ask a question...:ai ask $$?="Question for the AI service:"
   .AI settings...:ai settings
+  Logs
+  .Log viewer...:neon logs
+  .Search all logs...:neon logs search $$?="Search every log for:"
   Maintenance
   .Self-test:neon selftest
   .Debug console:neon debug

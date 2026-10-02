@@ -4,6 +4,10 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 
 ## 2026.16.0
 
+* **Log viewer** (`/neon logs`, toolbar Logs button, right-click menus): all of mIRC's logs sorted into categories - by type (channels, private
+  messages, status windows, other), by network and by age - with name filter and sort, opened in a coloured window of their own, searched (one log
+  or every listed log, wildcards or regex) with double-click-to-open-at-the-hit, `/neon logs here` for the window you are in, delete to the
+  recycle bin. Files stay where mIRC wrote them.
 * **Toolbar icon size** (Customize Toolbar > Small / Large / Actual) now really changes the icons: mIRC's /toolbar -z switch does not rescale PNG
   pictures, so the 16 px and 24 px copies (`assets\s16`, `assets\s24`, made by `tools\make_icon_sizes.py`) are chosen instead. Default is Actual (32 px).
 * Debug pass: two more `hdel` calls guarded; the whole test suite (31 scripts) was run with the status window captured - no script errors.

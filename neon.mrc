@@ -23,7 +23,7 @@ alias ns.icon {
   }
   return $+($scriptdir,assets\,%rel)
 }
-alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_v3 neon_web neon_theme neon_toolbar neon_events neon_mts neon_tedit neon_evt neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_extra neon_fun neon_ai neon_ui neon_sync neon_alias
+alias ns.modules return neon_system neon_secure neon_privacy neon_chat neon_v3 neon_web neon_theme neon_toolbar neon_events neon_mts neon_tedit neon_evt neon_dialogs neon_servers neon_bnc neon_chan neon_mod neon_stats neon_hud neon_tools neon_protect neon_away neon_sound neon_media neon_win neon_auto neon_usr neon_extra neon_fun neon_ai neon_ui neon_sync neon_logs neon_alias
 
 ; ---------------------------------------------------------------- settings API
 ; $ns.get(section,item,default)  /ns.set section item value

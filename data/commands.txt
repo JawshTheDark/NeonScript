@@ -98,6 +98,10 @@
 /neon sounds|Sound manager - map events to .wav files
 /neon mute|Toggle all NeonScript sounds
 /neon dnd|Toggle mIRC's Do Not Disturb
+#Logs
+/neon logs, /logs|Log viewer: every log sorted by type, network and age; opens one in a window, searches one or all, jumps to a hit
+/neon logs here|Open the viewer on the log of the window you are in
+/neon logs search <text>|Search every log for text (wildcards * ? work) and list the hits - double-click a hit to open it in place
 #Tools
 /neon fx|Text effects: rainbow, fire, ocean, neon, wide, small caps ...
 /neon chars|Symbol map - arrows, shapes, box drawing, Braille ...

@@ -90,6 +90,14 @@ Right-click any toolbar button for its own menu.
   Windows DPAPI when `neonsec.dll` is installed, and is never part of a backup or a release.
 * Nicknames are replaced by `User1`, `User2` ... in the chat that is sent and put back in the answer (switchable).
 
+## Log viewer
+
+* `/neon logs` (also `/logs`, the toolbar's Logs button and the right-click menus) sorts every log mIRC wrote into categories - by type
+  (channels, private messages, status windows, other), by network and by age - with a name filter and sorting. Double-click one to read it in a
+  window of its own, colours intact (the last 500 / 2000 / 10000 lines or everything). Search one log or every listed log (wildcards or regex);
+  double-click a hit to open the log at that spot. `/neon logs here` jumps to the log of the window you are in, `/neon logs search <text>` searches
+  them all. Your log files are only read - nothing is moved - except the Delete button, which sends one to the recycle bin after asking.
+
 ## Native helper (optional)
 
 * `neonui.dll` is a small 32-bit helper (source in `native/`, MIT) for what plain mIRC script cannot do. It is **off by default**:
