@@ -38,7 +38,7 @@ list after backing up `mirc.ini`. Prefer to do it by hand? Copy the `neonscript`
 | `/neon` | Control Panel - every setting, ten pages |
 | `/neonhelp` | Every command, in a window |
 | `/neon servers` | Servers & Networks - profiles, logins (NickServ/SASL), perform, auto-join |
-| `/neon themes` | Theme gallery (8 built-in themes + MTS themes) |
+| `/neon themes` | Theme gallery (8 classic + 12 holiday themes, your own, and MTS themes) |
 | `/neon toolbar` / `/neon button` | Customize the toolbar / add your own button |
 | `/channel` or `/neon cc` | Channel Control (replaces Channel Central) |
 | `/neon selftest` | Check the install and get a plain list of what is wrong |
@@ -58,7 +58,12 @@ Right-click any toolbar button for its own menu.
   keys, limits). Kick, ban, protection, userlist, bot commands and menus check the ranks the server supports and
   *your* rank before acting.
 * **MTS themes** - [mIRC Theme Standard](https://github.com/mIRC-Scripters/MTS-Themes) `.mts` files:
-  palette, fonts, event and chat templates. `/neon mts import | preview | apply | off`.
+  palette, fonts, event and chat templates. `/neon mts import | preview | apply | off`. Imported themes can be edited in the
+  Theme Studio (below): the colours change, the file's line layouts, fonts and palette are carried over byte for byte into a copy.
+* **Holiday themes** - New Year's Eve, Valentine's Day, St. Patrick's Day, Easter, Memorial Day, Juneteenth, Independence Day,
+  Labor Day, Halloween, Thanksgiving, Hanukkah and Christmas. Each one brings its own 16 first colours (so the colours are exact
+  - Halloween's pumpkin really is #ff7518) and a picture of the day in the gallery; they are made by `tools\make_holiday_themes.py`
+  and are ordinary themes: start the Theme Studio from one and make it your own. Switching to another theme gives your palette back.
 * **Channel Control** - topic (with history), modes/key/limit (ticking a switch applies it, with a result line that
   reports server refusals), users with rank-aware buttons, ban/exception/invite/quiet lists, per-channel protection.
 * **Userlist & protection** - auto owner/admin/op/halfop/voice, auto-kick, protected users; flood, CTCP, PM-spam,
@@ -103,10 +108,13 @@ Right-click any toolbar button for its own menu.
 * `neonui.dll` is a small 32-bit helper (source in `native/`, MIT) for what plain mIRC script cannot do. It is **off by default**:
   Control Panel > Native UI, or `/neon ui on`. NeonScript compares its SHA-256 with `data\neonui.sha256` before it is ever loaded.
 * **Nick list icons and avatars** - an icon for owner, admin, op, halfop and voice, and a coloured initial for everyone. mIRC
-  still paints the nick (colours, away dimming, selection); the helper only adds the icons on the left. A narrow nick list
-  drops the avatars first, then the icons, so names never get squeezed.
+  still paints the nick (colours, away dimming, selection); the helper only adds the icons on the left. Every channel's list looks the
+  same (an option hides the icons in narrow lists), and the list is fitted to its longest nickname - or a fixed width - as soon as names
+  arrive.
 * **Tree bar counts** - unread-mention (red) and unread-message (blue) pills next to the entries of mIRC's tree bar.
-* **Theme-matched frames** - title bar, border and scroll bars follow the NeonScript theme (Windows 11).
+* **Theme-matched frames** - title bar, border and scroll bars follow the NeonScript theme, and right-click menus get the accent border
+  (Windows 11). The helper watches windows being created on mIRC's own thread, so the colours are there from the first frame, not
+  after a delay. `/neon ui menus off` keeps the frames and drops the menu border.
 * **Taskbar badge** - the number of unread mentions on mIRC's taskbar button.
 * **HTML panels** (WebView2, which ships with Windows 11 and Edge) - small windows with pages from `data\ui`: the **emoji picker**
   (`/emoji`: search by name, groups, recently used, inserts at the cursor) and a **card** window that shows AI answers with
@@ -150,9 +158,11 @@ Right-click any toolbar button for its own menu.
   NeonScript - Chime, Arcade and Soft (`assets\sounds\<pack>`, synthesised by `tools\make_assets.py`, no third-party audio).
   Per-event sounds you chose in the Sound manager still win.
 
-* **Theme editor** (`/neon themeedit`) - every mIRC colour item and every NeonScript event colour (48 in all) with a live
-  picture of what chat will look like and the full 99-colour palette; save it as your own theme (it joins the gallery),
-  apply it, or export it as a classic `.mts` file.
+* **Theme Studio** (`/neon themeedit`; needs the native helper, otherwise the classic dialog opens - `/neon themeedit dialog` forces it) -
+  a big live picture of a whole window (toolbar, tree bar, chat in the modern, retro, minimal or MTS line style, nick list, edit box):
+  click anything in it to pick that colour, then click a colour on the right - one of mIRC's 99, any colour you like (closest match,
+  or exact in the theme's own 16 colours), with undo. Works on built-in, your own and imported MTS themes; save, apply, or export
+  as a classic `.mts` file. Every mIRC colour item and NeonScript event colour (48 in all), nick colours and accents.
 * **Event templates** (`/neon templates`) - how each kind of line looks (channel message, action, notice, private message,
   join, part, quit, kick, nick, mode, topic, invite) written with the MTS `<tokens>`; preview window, then apply. Saved as
   `data\mts\my_templates.mts`, an ordinary MTS theme.

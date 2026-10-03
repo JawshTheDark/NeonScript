@@ -64,8 +64,24 @@ alias ns.ui.chrome {
   %cap = $iif(%d,181824,ffffff)
   %txt = $iif(%d,e8e8f2,1d1d28)
   %bd = $ns.ui.hex($ns.get(theme,acc1,ff2e88),ff2e88)
-  var %r = $ns.ui.cmd($+(chrome,%t,on=,%on,%t,dark=,%d,%t,caption=,%cap,%t,text=,%txt,%t,border=,%bd,%t,scroll=,%d))
+  var %r = $ns.ui.cmd($+(chrome,%t,on=,%on,%t,dark=,%d,%t,caption=,%cap,%t,text=,%txt,%t,border=,%bd,%t,scroll=,%d,%t,menus=,$ns.flag(ui,menuborder,1)))
   if (%r != ok) ns.log ui chrome: %r
+}
+
+; ---- a theme was applied: window frames and menu borders follow its light/dark and accent, the tree bar gets its text colour
+on *:SIGNAL:ns.theme:{ .timer.nsuitheme -om 1 40 ns.ui.themed }
+alias ns.ui.themed {
+  if (!$ns.ui.active) return
+  ns.ui.chrome
+  ns.ui.treesync
+}
+; mIRC's "Treebar text" colour, pushed to the tree view itself and the tree repainted (so the entries show it at once)
+alias ns.ui.treesync {
+  if (!$ns.ui.active) return
+  var %c = $color(treebar text), %v = $ns.pal(%c), %r
+  if (%c !isnum) return
+  %r = $ns.ui.cmd($+(treetext,$ns.ui.tab,$base($ns.r8(%v),10,16,2),$base($ns.g8(%v),10,16,2),$base($ns.b8(%v),10,16,2)))
+  if (%r != ok) ns.log ui treetext: %r
 }
 
 ; ---- unread and mention counts on the tree bar entries
@@ -80,7 +96,7 @@ alias ns.tbc.inc {
   if ($2 == 1) inc %m
   else inc %h
   hadd -m ns.tbc %k %m %h
-  .timer.nstbc -o 1 1 ns.tbc.push
+  .timer.nstbc -om 1 150 ns.tbc.push
 }
 alias ns.tbc.add {
   if ($nick == $me) return
@@ -97,7 +113,7 @@ alias ns.tbc.clear {
   var %k = $+($cid,.,$1)
   if ($hget(ns.tbc,%k) != $null) {
     hdel ns.tbc %k
-    .timer.nstbc -o 1 1 ns.tbc.push
+    .timer.nstbc -om 1 150 ns.tbc.push
   }
 }
 on *:ACTIVE:*:{ if ($appactive) ns.tbc.clear $active }
@@ -147,9 +163,21 @@ alias ns.ui.stop {
   }
   if ($hget(ns.uis)) hdel ns.uis badge
 }
+; the build this script was written for (what $ns.ui.cmd(ver) answers)
+alias ns.ui.want return neonui 1.5
 alias ns.ui.start {
   .timer.nsui off
   if (!$ns.ui.active) return
+  ; a neonui.dll from before an update can still be loaded in this mIRC (a loaded DLL is never replaced by a reload):
+  ; put its work away, let it go and load the file that is on disk now
+  var %v = $ns.ui.cmd(ver)
+  if (%v != $ns.ui.want) {
+    ns.ui.stop
+    ns.ui.unload
+    if (!$ns.ui.active) return
+    var %n = $ns.ui.cmd(ver)
+    ns.log ui helper in memory was %v $+ , loaded %n from disk
+  }
   ns.ui.apply
   .timer.nsui 0 2 ns.ui.tick
 }
@@ -203,11 +231,40 @@ alias neon.ui {
     ns.say native UI helper off (neonui.dll unloaded).
     return
   }
+  if (%c == treecolors) {
+    if (!$ns.ui.active) { ns.err the native helper is off (/neon ui on). | return }
+    var %t = $color(treebar text), %b = $color(treebar), %r = $ns.ui.cmd(treecolors), %i = 1, %kv, %rows = $gettok(%r,2-,124)
+    ns.say tree bar colours in mIRC: text $+(%t,$chr(32),$chr(40),$ns.ted.hex(%t),$chr(41)) on $+(%b,$chr(32),$chr(40),$ns.ted.hex(%b),$chr(41))
+    ns.say the tree view itself: $gettok(%r,1,124)
+    while ($gettok(%rows,%i,59) != $null) {
+      %kv = $v1
+      inc %i
+      if (%i > 15) break
+      ns.say $chr(160) on screen: $left(%kv,-7) $+ : $chr(35) $+ $right(%kv,6)
+    }
+    return
+  }
+  if (%c == treefix) {
+    ns.ui.treesync
+    ns.say tree bar text colour pushed to the tree and the tree repainted.
+    return
+  }
+  if (%c == menus) {
+    if ($2 != on) && ($2 != off) {
+      ns.say accent border on the right-click menus: $iif($ns.flag(ui,menuborder,1),on,off) $+ . Change it with /neon ui menus on|off.
+      return
+    }
+    ns.set ui menuborder $iif($2 == on,1,0)
+    ns.ui.chrome
+    ns.say right-click menu border $2 $+ .
+    if (!$ns.ui.active) ns.say it shows once the native UI helper is on ( $+ /neon ui on).
+    return
+  }
   ns.say native UI helper: $iif($ns.ui.on,$+($ns.ec(join),ON,$ns.o),$+($ns.ec(kick),off,$ns.o))
   ns.say file neonui.dll: $iif(!$exists($ns.ui.dll),not installed (optional),$iif($ns.ui.ready,verified (SHA-256 matches),does NOT match the published hash - not used))
   if ($ns.ui.ready) {
     %v = $ns.ui.cmd(ver)
-    ns.say version: %v $+ , nick list icons $iif($ns.flag(ui,nlrank,1),on,off) $+ , avatars $iif($ns.flag(ui,nlavatar,1),on,off) $+ , taskbar badge $iif($ns.flag(ui,badge,1),on,off)
+    ns.say version: %v $+ , nick list icons $iif($ns.flag(ui,nlrank,1),on,off) $+ , avatars $iif($ns.flag(ui,nlavatar,1),on,off) $+ , taskbar badge $iif($ns.flag(ui,badge,1),on,off) $+ , frames $iif($ns.flag(ui,chrome,1),on,off) $+ , menu borders $iif($ns.flag(ui,menuborder,1),on,off)
   }
 }
 

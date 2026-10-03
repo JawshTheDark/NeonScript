@@ -59,10 +59,11 @@
 /neon update, /neon update url <https://...>|Check for a newer NeonScript (only when you run it; nothing is installed automatically)
 /neon secure [on/off]|Passwords and tokens: protect them with Windows DPAPI (neonsec.dll) or show the status
 #Look and feel
-/neon themes|Theme gallery: built-in themes plus imported MTS themes
+/neon themes|Theme gallery: the classic and holiday themes, your own, plus imported MTS themes
 /neon templates|Event templates: how each kind of line looks (messages, joins, kicks ...) with the MTS <tokens>, preview and apply
-/neon themeedit [theme]|Theme editor: every colour with a live preview, saved as your own theme, exportable as an .mts
-/neon theme <id>|Apply a built-in theme (neonnight, synthwave, matrix, amber, midnight, slate, paper, classic)
+/neon themeedit [theme|file.mts|dialog]|Theme Studio (the classic dialog without the native helper): a live whole-window preview, click what to change and then a colour; edits built-in, your own and imported MTS themes; saved, applied or exported as an .mts
+/neon theme <id>|Apply a theme (neonnight, synthwave, matrix, amber, midnight, slate, paper, classic, h_halloween, h_christmas ... or one of your own u_<name>)
+/neon palette restore|reset|Give back the 16 colours a theme with its own palette replaced: restore = what you had before, reset = mIRC's defaults
 /neon mts import [file]|Import a classic .mts (mIRC Theme Standard) theme
 /neon mts apply <file.mts>|Activate an imported MTS theme (palette, fonts, event and chat templates)
 /neon mts preview <file.mts>|Render a theme in a preview window without applying it
@@ -124,7 +125,7 @@ Channel commands|!roll !8ball !coin !time !uptime !help !seen <nick> !ops !rank 
 /dictate, /neon dictate [on|off|status]|Dictation: Windows speech recognition puts what you say in the editbox (microphone only while on; nothing is sent for you)
 #Native helper (optional)
 /emoji|Emoji picker panel - search, groups, recent; inserts at the cursor (needs the native helper, else opens the symbol map)
-/neon ui [on|off|status]|Nick list icons, avatars and the taskbar unread badge through neonui.dll (SHA-256 verified, off by default)
+/neon ui [on|off|status|menus on|off|treecolors|treefix]|Nick list icons, avatars, taskbar badge, tree bar pills and theme-matched window frames and right-click menu borders through neonui.dll (SHA-256 verified, off by default)
 #Settings sync (optional)
 /neon sync [status]|Show the sync folder, the last run and this PC's name
 /neon sync folder [path]|Choose the folder your PCs share (a dialog opens when no path is given)

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<title>Theme Studio</title>
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="ted.css">
+</head><body>
+<div id="top">
+  <span class="brand">Theme Studio</span>
+  <span class="grp"><label for="base">Start from</label><select id="base"></select></span>
+  <span class="grp"><label for="name">Name</label><input id="name" type="text" maxlength="60" spellcheck="false" autocomplete="off"></span>
+  <span class="grp" id="modegrp"><label>Mode</label><span class="seg" id="mode"><button data-v="dark">dark</button><button data-v="light">light</button></span></span>
+  <span id="dirty" title="Unsaved changes">&#9679;</span>
+  <span id="tag"></span>
+</div>
+<div id="main">
+  <div id="items"></div>
+  <div id="stage">
+    <div id="hint"><span id="hinttext">Click anything in the picture to pick it, then click a colour on the right.</span>
+      <span class="seg" id="style"><button data-v="modern">modern</button><button data-v="retro">retro</button><button data-v="minimal">minimal</button><button data-v="mts">MTS template</button></span></div>
+    <div id="mock"></div>
+  </div>
+  <div id="side">
+    <div id="cur"><span class="sw big" id="curSw"></span><div class="who"><b id="curName">-</b><span id="curVal"></span><span id="curHint"></span></div>
+      <div class="acts"><button id="undo" title="Ctrl+Z">Undo</button><button id="reset" title="Back to how it was when loaded">Reset item</button></div></div>
+    <h3>Any colour</h3>
+    <div id="any"><input type="color" id="picker" value="#ff2e88" title="Open the colour picker">
+      <input type="text" id="hex" maxlength="7" placeholder="#rrggbb" spellcheck="false" autocomplete="off" title="Type a colour like #ff2e88">
+      <div class="res"><span class="sw" id="nearSw"></span><span class="note" id="nearTxt"></span></div></div>
+    <div id="anybtns">
+      <button id="useNear">Use closest</button><button id="useExact" title="Puts this exact colour into one of the 16 custom palette slots">Use exactly</button></div>
+    <h3>mIRC's 99 colours</h3>
+    <div id="grid"></div>
+    <h3>Custom palette <span class="sub">(colours 0&ndash;15)</span></h3>
+    <label class="tog"><input type="checkbox" id="pc"><span>This theme has its own 16 colours</span></label>
+    <div id="custom"></div>
+    <button id="slotMode" class="hide" title="Then click one of the 16 colours (or press E)">Change a colour</button>
+    <div class="note" id="palNote">The first 16 colours are the ones most chat uses. With your own set, an exact colour can be used - but anything else that uses those numbers changes too.</div>
+  </div>
+</div>
+<div id="foot">
+  <button id="save" class="primary">Save</button>
+  <button id="apply">Save &amp; apply</button>
+  <button id="export">Export .mts...</button>
+  <button id="del" class="danger">Delete</button>
+  <span id="status"></span>
+  <button id="close">Close</button>
+</div>
+<div id="veil"><div class="box"><p id="veilTxt"></p><div class="acts"><button id="veilNo">Keep editing</button><button id="veilYes" class="primary">Discard</button></div></div></div>
+<script src="common.js"></script>
+<script src="ted.js"></script>
+</body></html>

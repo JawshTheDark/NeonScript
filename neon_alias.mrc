@@ -381,10 +381,11 @@ alias neon.menus {
 ; mode and your rank allows it, and the Give / Take label follows what the nick already holds.
 
 ; "Give op (@)" / "Take op (@)" for letter $1 on nick $2 - empty when the server lacks the mode or I may not
+; (the admin symbol is an ampersand, which a menu label would swallow as an accelerator key: ns.esc doubles it)
 alias ns.mn.priv {
   var %l = $1, %n = $2, %c = $iif($chan,$chan,$active)
   if (!$pos($ns.rk.modes,%l)) || (!$ns.rk.cangive(%c,%l)) return $null
-  return $+($iif($ns.rk.has(%c,%n,%l),Take,Give),$chr(32),$ns.rk.lname(%l),$chr(32),$chr(40),$ns.rk.char(%l),$chr(41))
+  return $+($iif($ns.rk.has(%c,%n,%l),Take,Give),$chr(32),$ns.rk.lname(%l),$chr(32),$chr(40),$ns.esc($ns.rk.char(%l)),$chr(41))
 }
 ; label only when the server has a quiet mode and I may use it
 alias ns.mn.q return $iif($ns.mute.kind != none && $ns.rk.cankick($iif($chan,$chan,$active)),$1-)
@@ -392,7 +393,7 @@ alias ns.mn.sign return $iif($ns.rk.has($iif($chan,$chan,$active),$2,$1),-,+)
 ; "Auto-op (@)" - shown when the server has that rank
 alias ns.mn.auto {
   if (!$pos($ns.rk.modes,$1)) return $null
-  return $+(Auto-,$ns.rk.lname($1),$chr(32),$chr(40),$ns.rk.char($1),$chr(41))
+  return $+(Auto-,$ns.rk.lname($1),$chr(32),$chr(40),$ns.esc($ns.rk.char($1)),$chr(41))
 }
 menu nicklist {
   Whois:whois $$1 $$1

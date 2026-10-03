@@ -741,8 +741,12 @@ def pal(i):
     return hexc(PALETTE[int(i)])
 
 
-def make_theme_thumbs():
+def make_theme_thumbs(only=None):
+    """Gallery pictures of the built-in themes.  only="h_" draws just the holiday themes (python tools/make_assets.py thumbs h_)."""
     import configparser
+    import sys as _sys
+    _sys.path.insert(0, HERE)
+    import holiday_motifs
     cp = configparser.ConfigParser(interpolation=None)
     cp.read(os.path.join(HERE, "..", "data", "themes.ini"), encoding="utf-8")
     order = cp["themes"]["order"].split(",")
@@ -750,7 +754,13 @@ def make_theme_thumbs():
     S2 = 2
     W, H = 240 * S2, 140 * S2
     for tid in order:
-        c = [pal(v) for v in cp[tid]["colors"].split(",")]
+        if only and not tid.startswith(only):
+            continue
+        # a theme with its own 16 first colours (rgb=) uses them for indices 0-15
+        own = None
+        if cp.has_option(tid, "rgb"):
+            own = [tuple(int(x) for x in t.split(",")) for t in cp[tid]["rgb"].split()]
+        c = [(own[int(v)] if own and int(v) < 16 else pal(v)) for v in cp[tid]["colors"].split(",")]
         col = dict(zip(ITEMS, c))
         img = Image.new("RGB", (W, H), col["MDI area"])
         d = ImageDraw.Draw(img)
@@ -769,6 +779,11 @@ def make_theme_thumbs():
         d.rectangle([W - 44 * S2, 15 * S2, W, H - 14 * S2], fill=col["Listbox"])
         for i, n in enumerate(("@Kira", "+Nova", "Zed", "You")):
             d.text((W - 41 * S2, (20 + i * 11) * S2), n, font=mono(8 * S2), fill=col["Listbox text"])
+        # a holiday theme's picture of the day, in the empty part of the tree bar
+        if own:
+            m = holiday_motifs.motif(tid, own, 48 * S2)
+            if m is not None:
+                img.paste(m, (5 * S2, 70 * S2), m)
         # chat area
         d.rectangle([59 * S2, 15 * S2, W - 45 * S2, H - 14 * S2], fill=col["Background"])
         f = mono(8 * S2)
@@ -798,7 +813,7 @@ def make_theme_thumbs():
         img = img.resize((240, 140), Image.LANCZOS)
         ImageDraw.Draw(img).rectangle([0, 0, 239, 139], outline=hexc(cp[tid]["acc1"].lstrip("#")), width=1)
         img.save(os.path.join(OUT, f"theme_{tid}.png"))
-    print(f"  {len(order)} theme thumbnails")
+    print(f"  {len([t for t in order if not only or t.startswith(only)])} theme thumbnails")
 
 
 
@@ -930,4 +945,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "thumbs":      # python tools/make_assets.py thumbs [h_]  - only the theme pictures
+        os.makedirs(OUT, exist_ok=True)
+        make_theme_thumbs(sys.argv[2] if len(sys.argv) > 2 else None)
+    else:
+        main()

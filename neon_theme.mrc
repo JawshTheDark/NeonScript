@@ -52,7 +52,10 @@ alias ns.theme.apply {
     ns.err unknown theme $qt(%id)
     return
   }
-  var %items = $ns.theme.items, %i = 1
+  var %items = $ns.theme.items, %i = 1, %rgb = $readini(%f,n,%id,rgb)
+  ; a theme with its own 16 colours (the theme editor makes those) brings them along; every other theme gives the user's palette back
+  if ($numtok(%rgb,32) == 16) && ($isalias(ns.mts.palset)) ns.mts.palset %rgb
+  elseif ($isalias(ns.mts.palrestore)) ns.mts.palrestore
   while (%i <= 31) {
     color $gettok(%items,%i,44) $gettok(%cols,%i,44)
     inc %i
@@ -160,7 +163,7 @@ alias -l tsub {
   if ($1 !isnum) return
   var %id = $gettok($ns.theme.entries,$1,32)
   if (!%id) return
-  return $iif(%id == $ns.theme.current,$style(1)) $ns.theme.ename(%id) $+ :ns.theme.apply %id
+  return $iif(%id == $ns.theme.current,$style(1)) $ns.esc($ns.theme.ename(%id)) $+ :ns.theme.apply %id
 }
 menu @nstb_theme {
   Theme gallery...:neon themes
@@ -223,7 +226,7 @@ on *:DIALOG:ns_theme:sclick:11:{
   if ($ns.theme.ismts(%id)) ns.mts.preview $mid(%id,5)
 }
 on *:DIALOG:ns_theme:sclick:12:{ ns.later ns.mts.import }
-on *:DIALOG:ns_theme:sclick:14:{ ns.later neon themeedit }
+on *:DIALOG:ns_theme:sclick:14:{ ns.later neon themeedit $gettok($ns.theme.entries,$did(ns_theme,1).sel,32) }
 alias -l tgapply {
   var %id = $gettok($ns.theme.entries,$did(ns_theme,1).sel,32)
   if (%id) ns.theme.apply %id

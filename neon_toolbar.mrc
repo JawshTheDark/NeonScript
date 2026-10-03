@@ -309,10 +309,10 @@ menu @nstb_connect {
   -
   Networks
   .$submenu($ns.srv.menu($1))
-  Servers & networks...:neon servers
+  Servers && networks...:neon servers
 }
 menu @nstb_servers {
-  Servers & networks...:neon servers
+  Servers && networks...:neon servers
   mIRC server list:server -d
 }
 menu @nstb_channels {

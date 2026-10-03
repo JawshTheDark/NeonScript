@@ -42,7 +42,7 @@ using std::max;
 #include <string>
 #include <vector>
 
-#define NEONUI_VERSION L"neonui 1.2"
+#define NEONUI_VERSION L"neonui 1.5"
 
 typedef struct {
     DWORD mVersion;
@@ -60,11 +60,15 @@ static ULONG_PTR g_gdip = 0;
 static bool      g_gdipOk = false;
 static HMODULE   g_self = nullptr;
 
-BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID)
+static void EmergencyUnhook();                           /* below: the window hook and its timer must not outlive the DLL */
+
+BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID reserved)
 {
     if (reason == DLL_PROCESS_ATTACH) {
         g_self = h;
         DisableThreadLibraryCalls(h);
+    } else if (reason == DLL_PROCESS_DETACH && !reserved) {
+        EmergencyUnhook();                               /* FreeLibrary without UnloadDll having run */
     }
     return TRUE;
 }
@@ -117,7 +121,8 @@ static const UINT_PTR HOOK_ID = 0x4E55;     /* "NU" */
 
 static void NlApply(HWND chan, bool force);          /* nick list width, below */
 static void ChromeAll(bool force);                    /* window frame colours, below */
-static bool NlWanted() { return g_cfg.rank || g_cfg.avatar || g_cfg.sizeMode; }
+static bool g_nlOn = false;                            /* NeonScript has sent nlcfg and not yet nlunhook: nick list work is wanted */
+static bool NlWanted() { return g_nlOn && (g_cfg.rank || g_cfg.avatar || g_cfg.sizeMode); }
 
 static int RankIndex(wchar_t c)             /* q a o h v  ->  0..4 */
 {
@@ -439,7 +444,7 @@ static int NlSetWidth(HWND chan, int want)
     return NlWidthNow(chan);
 }
 
-struct NlCache { int count = -1, target = 0; };
+struct NlCache { int count = -1, target = 0; DWORD last = 0; };
 static std::map<HWND, NlCache> g_nlCache;
 
 /* how wide the list must be for its longest nickname, the icons and a scroll bar */
@@ -487,8 +492,16 @@ static void NlApply(HWND chan, bool force)
         NlCache &c = g_nlCache[chan];
         int cnt = (int)SendMessageW(l, LB_GETCOUNT, 0, 0);
         if (c.count != cnt || c.target <= 0) {
-            c.count = cnt;
-            c.target = NlMeasure(l);
+            /* every name is looked at, so a long list is measured at most every 300 ms (1500+ names: every 2 s) -
+             * in between the previous width stays */
+            DWORD gap = cnt <= 200 ? 0 : (cnt <= 1500 ? 300 : 2000);
+            if (c.target > 0 && gap && GetTickCount() - c.last < gap) {
+                /* too soon: keep the old width, the next change or the poll looks again */
+            } else {
+                c.count = cnt;
+                c.target = NlMeasure(l);
+                c.last = GetTickCount();
+            }
         }
         target = c.target;
         if (target <= 0) return;
@@ -633,6 +646,73 @@ static std::wstring TreeDump()
     HTREEITEM root = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_ROOT, 0);
     TreeDumpRec(tv, root, 0, out);
     return out;
+}
+
+/* What the tree bar really shows: its own text and background colour, and for every visible row the colour of the text as it is
+ * drawn (the most common colour in the row's text that is not the background).  Read-only - a diagnostic for "the theme's tree
+ * bar text colour is set but the entries look different".  "treetext <rrggbb>" gives the tree view a text colour of its own. */
+static std::wstring TvText(HWND tv, HTREEITEM it);
+static std::wstring TreeColors()
+{
+    HWND tv = FindTreeView();
+    if (!tv) return L"no tree bar";
+    RECT cl;
+    GetClientRect(tv, &cl);
+    int W = cl.right, H = cl.bottom;
+    if (W < 16 || H < 16) return L"tree bar too small";
+    HDC wdc = GetDC(tv);
+    HDC mem = CreateCompatibleDC(wdc);
+    HBITMAP bmp = CreateCompatibleBitmap(wdc, W, H);
+    HGDIOBJ old = SelectObject(mem, bmp);
+    PrintWindow(tv, mem, 1 /* PW_CLIENTONLY */);
+    wchar_t head[120];
+    COLORREF tvt = (COLORREF)SendMessageW(tv, TVM_GETTEXTCOLOR, 0, 0), tvb = (COLORREF)SendMessageW(tv, TVM_GETBKCOLOR, 0, 0);
+    swprintf(head, 120, L"tvtext=%02X%02X%02X tvbk=%02X%02X%02X|", GetRValue(tvt), GetGValue(tvt), GetBValue(tvt), GetRValue(tvb), GetGValue(tvb), GetBValue(tvb));
+    std::wstring out = head;
+    int n = 0;
+    for (HTREEITEM it = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, 0); it && n < 40;
+         it = (HTREEITEM)SendMessageW(tv, TVM_GETNEXTITEM, TVGN_NEXTVISIBLE, (LPARAM)it), n++) {
+        RECT rc = {};
+        *(HTREEITEM *)&rc = it;
+        if (!SendMessageW(tv, TVM_GETITEMRECT, TRUE, (LPARAM)&rc)) continue;
+        int mid = (rc.top + rc.bottom) / 2;
+        COLORREF bg = GetPixel(mem, min(W - 3, (int)rc.right + 4), mid);
+        if (bg == CLR_INVALID) continue;
+        std::map<COLORREF, int> cnt;
+        for (int y = max(0, (int)rc.top + 2); y < min(H, (int)rc.bottom - 1); y++)
+            for (int x = max(0, (int)rc.left); x < min(W, (int)rc.right); x++) {
+                COLORREF p = GetPixel(mem, x, y);
+                if (p == CLR_INVALID) continue;
+                int d = abs((int)GetRValue(p) - (int)GetRValue(bg)) + abs((int)GetGValue(p) - (int)GetGValue(bg)) + abs((int)GetBValue(p) - (int)GetBValue(bg));
+                if (d > 150) cnt[p]++;
+            }
+        COLORREF best = CLR_INVALID;
+        int bc = 0;
+        for (auto &kv : cnt)
+            if (kv.second > bc) { bc = kv.second; best = kv.first; }
+        std::wstring t = TvText(tv, it);
+        for (auto &c : t) if (c == L';' || c == L'=' || c == L'|') c = L' ';
+        wchar_t b[200];
+        if (best == CLR_INVALID) swprintf(b, 200, L"%ls=none;", t.c_str());
+        else swprintf(b, 200, L"%ls=%02X%02X%02X;", t.c_str(), GetRValue(best), GetGValue(best), GetBValue(best));
+        out += b;
+    }
+    SelectObject(mem, old);
+    DeleteObject(bmp);
+    DeleteDC(mem);
+    ReleaseDC(tv, wdc);
+    return out;
+}
+
+static std::wstring TreeSetText(const std::wstring &hex)
+{
+    HWND tv = FindTreeView();
+    if (!tv) return L"error:no tree bar";
+    COLORREF c = HexColour(hex, CLR_INVALID);
+    if (c == CLR_INVALID) return L"error:colour";
+    SendMessageW(tv, TVM_SETTEXTCOLOR, 0, (LPARAM)c);
+    InvalidateRect(tv, nullptr, TRUE);
+    return L"ok";
 }
 
 /* ---- unread / mention badges on the tree bar entries ------------------------------------------------------------------
@@ -801,7 +881,7 @@ static std::wstring TreeBadges(const std::vector<std::wstring> &a)
  * Windows 11 lets any window take its caption, caption text and border colours (DWM attributes); scroll bars of the common
  * controls take the dark Explorer theme.  Applied to mIRC's main window and every other window of the process. */
 struct Chrome {
-    bool on = false, dark = true, scroll = true;
+    bool on = false, dark = true, scroll = true, menus = true;
     COLORREF caption = RGB(0x10, 0x10, 0x18), text = RGB(0xE8, 0xE8, 0xF2), border = RGB(0x2A, 0x2A, 0x3C);
 };
 static Chrome g_chrome;
@@ -834,16 +914,21 @@ static BOOL CALLBACK ChromeChildCb(HWND c, LPARAM l)
     return TRUE;
 }
 
+static void ChromeConsider(HWND h)                       /* tint one top-level window, if it is a real frame */
+{
+    if ((GetWindowLongW(h, GWL_STYLE) & WS_CAPTION) != WS_CAPTION) return;       /* popup menus, tooltips ... have no title bar */
+    if (g_chromed.count(h)) return;
+    g_chromed.insert(h);
+    ChromeOne(h);
+    if (g_chrome.on && g_chrome.scroll) EnumChildWindows(h, ChromeChildCb, g_chrome.dark ? 1 : 0);
+}
+
 static BOOL CALLBACK ChromeTopCb(HWND h, LPARAM)
 {
     DWORD pid = 0;
     GetWindowThreadProcessId(h, &pid);
     if (pid != GetCurrentProcessId() || !IsWindowVisible(h)) return TRUE;
-    if ((GetWindowLongW(h, GWL_STYLE) & WS_CAPTION) != WS_CAPTION) return TRUE;      /* popup menus, tooltips ... have no title bar */
-    if (g_chromed.count(h)) return TRUE;
-    g_chromed.insert(h);
-    ChromeOne(h);
-    if (g_chrome.on && g_chrome.scroll) EnumChildWindows(h, ChromeChildCb, g_chrome.dark ? 1 : 0);
+    ChromeConsider(h);
     return TRUE;
 }
 
@@ -858,15 +943,119 @@ static void ChromeAll(bool force)
     EnumWindows(ChromeTopCb, 0);
 }
 
+/* ---- the instant path ---------------------------------------------------------------------------------------------------
+ * The poll (NickScan, every two seconds) is only a safety net: a window that appears between two polls would show up plain and
+ * change in front of the user a moment later.  A WH_CALLWNDPROCRET hook on mIRC's own UI thread sees windows as they are
+ * created and shown - before the first frame is composed - so
+ *   - a dialog gets its frame colours and a right-click menu (window class #32768) its border colour at once,
+ *   - a new channel window gets its nick list hooked (rank icons, avatars) before mIRC paints the first row, and
+ *   - a nick list that gains or loses names is fitted to its width a few milliseconds later, not at the next poll. */
+static HHOOK g_wndHook = nullptr;
+static volatile LONG g_hookFrames = 0, g_hookMenus = 0, g_hookChans = 0, g_hookLists = 0;
+static HRESULT g_hookHr = S_OK;
+static LARGE_INTEGER g_hookLast;                         /* test: when the hook last tinted a menu */
+static UINT_PTR g_nlTimer = 0;
+
+static VOID CALLBACK NlTimerProc(HWND, UINT, UINT_PTR id, DWORD)
+{
+    KillTimer(nullptr, id);
+    g_nlTimer = 0;
+    for (auto &kv : g_hooks)
+        if (IsWindow(kv.first)) NlApply(kv.first, false);
+}
+
+static void HookShown(HWND h)
+{
+    wchar_t cls[16];
+    if (!GetClassNameW(h, cls, 16)) return;
+    if (!wcscmp(cls, L"#32768")) {
+        if (!g_chrome.menus) return;
+        g_hookHr = DwmSetWindowAttribute(h, 34, &g_chrome.border, sizeof(COLORREF));      /* DWMWA_BORDER_COLOR */
+        QueryPerformanceCounter(&g_hookLast);
+        InterlockedIncrement(&g_hookMenus);
+        return;
+    }
+    if (GetWindowLongW(h, GWL_STYLE) & WS_CHILD) return;            /* MDI windows and controls keep mIRC's own look */
+    size_t before = g_chromed.size();
+    ChromeConsider(h);
+    if (g_chromed.size() != before) InterlockedIncrement(&g_hookFrames);
+}
+
+static void HookCreated(HWND h)                          /* a window was just created: is it a channel window? */
+{
+    if (!NlWanted() || g_hooks.count(h)) return;
+    wchar_t cls[24];
+    if (!GetClassNameW(h, cls, 24) || wcscmp(cls, L"mIRC_Channel")) return;
+    if (SetWindowSubclass(h, ChanProc, HOOK_ID, 0)) {
+        g_hooks[h] = true;
+        InterlockedIncrement(&g_hookChans);
+    }
+}
+
+static void HookListChanged(HWND list)                   /* names were added to or removed from a list box */
+{
+    if (!g_cfg.sizeMode) return;
+    HWND chan = GetParent(list);
+    if (!chan || !g_hooks.count(chan) || NickList(chan) != list) return;
+    g_nlCache[chan].count = -1;                          /* measure again: a rename keeps the count but not the longest name */
+    InterlockedIncrement(&g_hookLists);
+    if (!g_nlTimer) g_nlTimer = SetTimer(nullptr, 0, 30, NlTimerProc);     /* a burst of names (NAMES, a netsplit) is fitted once */
+}
+
+static void Guard(void (*fn)(HWND), HWND h)
+{
+    __try { fn(h); } __except (EXCEPTION_EXECUTE_HANDLER) {}
+}
+
+static LRESULT CALLBACK UiHookProc(int code, WPARAM w, LPARAM l)
+{
+    if (code == HC_ACTION) {
+        const CWPRETSTRUCT *c = (const CWPRETSTRUCT *)l;
+        UINT m = c->message;
+        if (m == WM_SHOWWINDOW) {
+            if (c->wParam && g_chrome.on) Guard(HookShown, c->hwnd);
+        } else if (m == WM_WINDOWPOSCHANGED) {
+            if (g_chrome.on && c->lParam && (((const WINDOWPOS *)c->lParam)->flags & SWP_SHOWWINDOW)) Guard(HookShown, c->hwnd);
+        } else if (m == WM_CREATE) {
+            Guard(HookCreated, c->hwnd);
+        } else if (m == LB_ADDSTRING || m == LB_INSERTSTRING || m == LB_DELETESTRING || m == LB_RESETCONTENT) {
+            Guard(HookListChanged, c->hwnd);
+        }
+    }
+    return CallNextHookEx(g_wndHook, code, w, l);
+}
+
+static void EmergencyUnhook()
+{
+    if (g_wndHook) { UnhookWindowsHookEx(g_wndHook); g_wndHook = nullptr; }
+    if (g_nlTimer) { KillTimer(nullptr, g_nlTimer); g_nlTimer = 0; }
+}
+
+/* installed while any feature that wants it is on, removed when none is (or when the DLL is being unloaded) */
+static void UiHookSync(bool shutdown = false)
+{
+    bool want = !shutdown && (g_chrome.on || NlWanted());
+    if (want && !g_wndHook && g_mirc) {
+        DWORD tid = GetWindowThreadProcessId(g_mirc, nullptr);
+        if (tid) g_wndHook = SetWindowsHookExW(WH_CALLWNDPROCRET, UiHookProc, g_self, tid);
+    } else if (!want && g_wndHook) {
+        UnhookWindowsHookEx(g_wndHook);
+        g_wndHook = nullptr;
+    }
+    if (!g_wndHook && g_nlTimer) { KillTimer(nullptr, g_nlTimer); g_nlTimer = 0; }
+}
+
 static std::wstring ChromeCfg(const std::vector<std::wstring> &a)
 {
     bool wasOn = g_chrome.on;
     g_chrome.on = Opt(a, L"on", L"0") == L"1";
     g_chrome.dark = Opt(a, L"dark", L"1") != L"0";
     g_chrome.scroll = Opt(a, L"scroll", L"1") != L"0";
+    g_chrome.menus = Opt(a, L"menus", L"1") != L"0";
     g_chrome.caption = HexColour(Opt(a, L"caption"), g_chrome.caption);
     g_chrome.text = HexColour(Opt(a, L"text"), g_chrome.text);
     g_chrome.border = HexColour(Opt(a, L"border"), g_chrome.border);
+    UiHookSync();
     if (g_chrome.on || wasOn) ChromeAll(true);
     return L"ok";
 }
@@ -1229,7 +1418,23 @@ static void OpenPanel(const std::vector<std::wstring> &a)
     bool dark = fl.find(L"dark") != std::wstring::npos;
     RECT mr = { 100, 100, 900, 700 };
     if (g_mirc) GetWindowRect(g_mirc, &mr);
+    /* never bigger than the screen mIRC is on (the Theme Studio asks for a lot of room), and placed inside its work area */
+    RECT wa = { 0, 0, 0, 0 };
+    {
+        MONITORINFO mi = {};
+        mi.cbSize = sizeof(mi);
+        HMONITOR mon = g_mirc ? MonitorFromWindow(g_mirc, MONITOR_DEFAULTTONEAREST) : MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY);
+        if (mon && GetMonitorInfoW(mon, &mi)) wa = mi.rcWork;
+    }
+    if (wa.right > wa.left && wa.bottom > wa.top) {
+        w = max(240, min(w, (int)(wa.right - wa.left) - 24));
+        h = max(160, min(h, (int)(wa.bottom - wa.top) - 24));
+    }
     int x = mr.left + max(0, (int)((mr.right - mr.left) - w) / 2), y = mr.top + max(0, (int)((mr.bottom - mr.top) - h) / 3);
+    if (wa.right > wa.left && wa.bottom > wa.top) {
+        x = max((int)wa.left + 8, min(x, (int)wa.right - w - 8));
+        y = max((int)wa.top + 8, min(y, (int)wa.bottom - h - 8));
+    }
     DWORD ex = (fl.find(L"top") != std::wstring::npos) ? WS_EX_TOPMOST : 0;
     HWND hw = CreateWindowExW(ex, PANEL_CLASS, a[5].c_str(), WS_OVERLAPPEDWINDOW, x, y, w, h, nullptr, nullptr, g_self, p.get());
     if (!hw) {
@@ -1384,6 +1589,77 @@ static void PanelShutdown()
     }
 }
 
+/* ===================================================================================== test probes
+ * Only answered when NEONUI_TEST is set in mIRC's environment (the test harness does that).  menuprobe opens a real popup
+ * menu on mIRC's UI thread, waits for its window to become visible and reports whether the border colour had already been
+ * applied (the hook) and how long after the call that was. */
+static bool TestMode()
+{
+    static int v = -1;
+    if (v < 0) { wchar_t e[8]; v = GetEnvironmentVariableW(L"NEONUI_TEST", e, 8) > 0 ? 1 : 0; }
+    return v == 1;
+}
+
+static struct {
+    LARGE_INTEGER t0, freq;
+    UINT_PTR timer;
+    int ticks;
+    COLORREF col;
+    HRESULT hr;
+    double seenMs, hookMs, holdMs;
+    LONG menusBefore;
+} g_pr;
+
+static VOID CALLBACK ProbeTimer(HWND, UINT, UINT_PTR id, DWORD)
+{
+    g_pr.ticks++;
+    LARGE_INTEGER t1;
+    QueryPerformanceCounter(&t1);
+    double now = (double)(t1.QuadPart - g_pr.t0.QuadPart) * 1000.0 / (double)g_pr.freq.QuadPart;
+    if (g_pr.seenMs < 0) {
+        HWND m = FindWindowW(L"#32768", nullptr);
+        if ((m && IsWindowVisible(m)) || g_pr.ticks > 100) {
+            g_pr.seenMs = now;
+            if (g_hookLast.QuadPart > g_pr.t0.QuadPart)
+                g_pr.hookMs = (double)(g_hookLast.QuadPart - g_pr.t0.QuadPart) * 1000.0 / (double)g_pr.freq.QuadPart;
+            if (m) {
+                COLORREF c = 0;
+                g_pr.hr = DwmGetWindowAttribute(m, 34, &c, sizeof(c));
+                g_pr.col = c;
+            }
+        }
+    }
+    if ((g_pr.seenMs >= 0 && now - g_pr.seenMs >= g_pr.holdMs) || g_pr.ticks > 600) {
+        KillTimer(nullptr, id);
+        EndMenu();
+    }
+}
+
+static std::wstring MenuProbe(const std::vector<std::wstring> &a)
+{
+    memset(&g_pr, 0, sizeof(g_pr));
+    g_pr.seenMs = g_pr.hookMs = -1;
+    g_pr.holdMs = max(0, min(5000, _wtoi(Opt(a, L"hold", L"0").c_str())));      /* keep the menu open this long (screenshots) */
+    g_pr.menusBefore = g_hookMenus;
+    HMENU hm = CreatePopupMenu();
+    AppendMenuW(hm, MF_STRING, 1, L"Whois");
+    AppendMenuW(hm, MF_STRING, 2, L"Query");
+    AppendMenuW(hm, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hm, MF_STRING, 3, L"Give admin (&&)");
+    QueryPerformanceFrequency(&g_pr.freq);
+    QueryPerformanceCounter(&g_pr.t0);
+    g_pr.timer = SetTimer(nullptr, 0, 10, ProbeTimer);
+    TrackPopupMenu(hm, TPM_RETURNCMD | TPM_NONOTIFY, 120, 120, 0, g_mirc, nullptr);
+    if (g_pr.timer) KillTimer(nullptr, g_pr.timer);
+    DestroyMenu(hm);
+    wchar_t b[220];
+    swprintf(b, 220, L"seen=%.1fms hook=%.1fms tinted=%ld border=%06X get=0x%08X set=0x%08X ticks=%d",
+             g_pr.seenMs, g_pr.hookMs, (long)(g_hookMenus - g_pr.menusBefore),
+             (unsigned)(((g_pr.col & 255) << 16) | (g_pr.col & 0xFF00) | ((g_pr.col >> 16) & 255)),
+             (unsigned)g_pr.hr, (unsigned)g_hookHr, g_pr.ticks);
+    return b;
+}
+
 /* ===================================================================================== commands */
 static std::wstring Run(const std::wstring &in)
 {
@@ -1391,6 +1667,7 @@ static std::wstring Run(const std::wstring &in)
     const std::wstring &v = a[0];
     if (v == L"ver") return NEONUI_VERSION;
     if (v == L"nlcfg") {
+        g_nlOn = true;
         g_cfg.rank = Opt(a, L"rank", L"1") != L"0";
         g_cfg.avatar = Opt(a, L"avatar", L"1") != L"0";
         g_cfg.adapt = Opt(a, L"auto", L"0") == L"1";
@@ -1409,6 +1686,7 @@ static std::wstring Run(const std::wstring &in)
             }
             g_nlCache.clear();
         }
+        UiHookSync();
         if (!NlWanted()) UnhookAll();
         else { NickScan(); Repaint(); }
         return L"ok";
@@ -1422,9 +1700,13 @@ static std::wstring Run(const std::wstring &in)
     }
     if (v == L"menuitem") return PressMenu(a.size() > 1 ? a[1] : L"");
     if (v == L"treedump") return TreeDump();
+    if (v == L"treecolors") return TreeColors();
+    if (v == L"treetext") return TreeSetText(a.size() > 1 ? a[1] : L"");
     if (v == L"treebadge") return TreeBadges(a);
     if (v == L"treestat") { wchar_t b[120]; swprintf(b, 120, L"notify=%d any=%d pre=%d post=%d hit=%d entries=%d bar=%p tv=%p", g_tbNotify, g_tbAny, g_tbPre, g_tbPost, g_tbHit, (int)g_tbe.size(), (void *)g_tbBar, (void *)g_tbTv); return b; }
     if (v == L"chrome") return ChromeCfg(a);
+    if (v == L"chromeinfo") { wchar_t b[200]; swprintf(b, 200, L"hook=%d on=%d menus=%d frames=%ld menutints=%ld chromed=%d chans=%ld lists=%ld hooked=%d", g_wndHook ? 1 : 0, g_chrome.on ? 1 : 0, g_chrome.menus ? 1 : 0, (long)g_hookFrames, (long)g_hookMenus, (int)g_chromed.size(), (long)g_hookChans, (long)g_hookLists, (int)g_hooks.size()); return b; }
+    if (v == L"menuprobe") return TestMode() ? MenuProbe(a) : std::wstring(L"error:test only");
     if (v == L"menulist") { std::wstring o; HMENU bar = g_mirc ? GetMenu(g_mirc) : nullptr; if (bar) ListMenu(bar, 0, o); else o = L"no menu bar"; return o; }
     if (v == L"nlinfo") return NlInfo();
     if (v == L"nlwidth") {
@@ -1434,7 +1716,7 @@ static std::wstring Run(const std::wstring &in)
         return out;
     }
     if (v == L"nlscan") return std::to_wstring(NickScan());
-    if (v == L"nlunhook") { UnhookAll(); return L"ok"; }
+    if (v == L"nlunhook") { UnhookAll(); g_nlOn = false; UiHookSync(); return L"ok"; }
     if (v == L"badge") return Badge(a.size() > 1 ? _wtoi(a[1].c_str()) : 0, a.size() > 2 ? a[2] : L"");
     if (v == L"progress") return Progress(a.size() > 1 ? a[1] : L"", a.size() > 2 ? _wtoi(a[2].c_str()) : 0);
     return L"error:unknown command";
@@ -1466,6 +1748,8 @@ static void Shutdown()
     if (g_chrome.on) { g_chrome.on = false; ChromeAll(true); }
     PanelShutdown();
     UnhookAll();
+    g_nlOn = false;
+    UiHookSync(true);                                    /* the window hook and its timer go before the DLL does */
     if (g_tb) {
         g_tb->SetOverlayIcon(g_mirc, nullptr, L"");
         g_tb->SetProgressState(g_mirc, TBPF_NOPROGRESS);

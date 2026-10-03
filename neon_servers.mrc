@@ -155,7 +155,7 @@ alias ns.srv.menu {
   if ($1 !isnum) return
   var %id = $gettok($ns.srv.ids,$1,32)
   if (!%id) return
-  return $iif(%id == $ns.srv.default,$style(1)) $ns.srv.get(%id,name) $+ :ns.srv.connect %id
+  return $iif(%id == $ns.srv.default,$style(1)) $ns.esc($ns.srv.get(%id,name)) $+ :ns.srv.connect %id
 }
 
 ; remember when *I* asked to disconnect so reconnect does not fight me

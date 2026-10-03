@@ -4,7 +4,29 @@ Versions are `year.minor.patch`. The version lives in one place: `alias ns.ver` 
 
 ## 2026.17.0
 
-* **Frames only**: the theme tint is applied to windows with a title bar only - pop-up menus no longer get a coloured border at random.
+* **Holiday themes**: New Year's Eve, Valentine's Day, St. Patrick's Day, Easter (a light one), Memorial Day, Juneteenth, Independence Day,
+  Labor Day, Halloween, Thanksgiving, Hanukkah and Christmas - each with exact colours (its own 16 first colours, restored when you
+  switch away), a picture of the day in the gallery and a group of its own in the Theme Studio. Made by `tools/make_holiday_themes.py`
+  (contrast-checked), pictures by `tools/make_assets.py thumbs h_`.
+* **Theme Studio** (`/neon themeedit`, native helper; the old dialog is still there without it): a whole-window live preview - toolbar, tree
+  bar, chat in modern / retro / minimal / MTS-template style, nick list, edit box - where you click what you want to change and then a
+  colour: mIRC's 99, any colour (closest match, or exact in the theme's own 16 colours), nick colours, accents, undo, reset item.
+  **Imported MTS themes can be edited**: the colours change and the rest of the file (templates, fonts, palette, every byte of it) is carried
+  into a copy named `<name>.mts`; the original is never touched. The first 16 colours of a theme can now be its own (`rgb=` in
+  `themes_user.ini`, exact RGB), the way MTS themes have always had them.
+* **A theme change now reaches everything**: window frames and menu borders (light/dark, accent), the tree bar's text colour (pushed to the
+  tree itself and repainted) and every channel's nick-list rank colours follow the new theme at once; the old behaviour left the rank
+  colours of the previous theme on the nick lists. `/neon ui treecolors` shows what the tree bar really draws, `/neon ui treefix` repaints it.
+* **Instant, not polled** (neonui 1.3): dialogs get their theme frame and right-click menus their accent border the moment they appear. The native
+  helper now watches window creation on mIRC's own UI thread; the two-second poll that used to tint a menu after it was already on screen
+  ("the colours take a second to render in") is only a safety net now. A new channel window's nick list gets its rank icons and avatars
+  from the very first row and is fitted to its width within a few milliseconds of the names arriving (it used to wait for the next poll),
+  and tree bar pills show 150 ms after a message instead of a second. `/neon ui menus off` keeps the window frames but drops the menu border.
+* **Frames and menus**: the frame tint is for windows with a title bar only; a pop-up menu gets nothing but the border colour.
+* **A stale helper is swapped automatically**: a neonui.dll that an older session still has loaded (Windows never replaces a loaded DLL) is
+  let go and the file on disk loaded when the helper starts or after `/neon reload` - no more `/neon ui off`, `on`.
+* Menu labels with an ampersand: the admin symbol in "Give admin (&)" / "Auto-admin (&)" and the "Servers & networks" entry were eaten as
+  menu accelerator keys ("Give admin ()"); they are escaped now.
 * **Tree bar pills** turn red for a window mIRC itself shows in its highlight colour (its own highlight words), not only for NeonScript's mention words.
 * **Commands menu** (menu bar) gained the newer tools: Mentions inbox, Log viewer, Ignore manager, Emoji picker, Dictate, AI helpers, Native UI helper, Settings sync.
 

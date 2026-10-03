@@ -285,6 +285,24 @@ alias ns.nl.refresh {
     inc %i
   }
 }
+; a theme was applied: every channel's nick list gets the new theme's rank colours (they are painted per nick with /cline,
+; so they would otherwise keep the old theme's colours until the next join or mode change)
+on *:SIGNAL:ns.theme:{ ns.nl.all }
+alias ns.nl.all {
+  if (!$ns.flag(chat,nlcolors,1)) return
+  var %j = 1
+  while (%j <= $scon(0)) {
+    scon %j ns.nl.allhere
+    inc %j
+  }
+}
+alias ns.nl.allhere {
+  var %i = 1
+  while (%i <= $chan(0)) {
+    ns.nl.refresh $chan(%i)
+    inc %i
+  }
+}
 ; several mode changes in a row -> one refresh a moment later
 alias ns.nl.queue {
   if (!$ns.flag(chat,nlcolors,1)) return

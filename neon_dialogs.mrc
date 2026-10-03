@@ -329,7 +329,7 @@ dialog ns_opt {
   edit "", 1413, 222 131 24 11, limit 3
   text "pixels", 1418, 250 133 40 9
   check "Unread and mention counts on the tree bar entries", 1419, 108 146 234 9
-  check "Match the window frames (title bar, border, scroll bars) to the theme", 1420, 108 158 234 9
+  check "Match frames, right-click menu borders and scroll bars to the theme", 1420, 108 158 234 9
   text "", 1405, 92 172 250 16
   text "neonui.dll is open source (native folder) and only touches mIRC's own windows.", 1406, 92 184 250 9
   button "Check helper", 1407, 92 195 70 12

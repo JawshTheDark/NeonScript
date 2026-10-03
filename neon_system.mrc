@@ -315,6 +315,17 @@ alias neon.selftest {
   }
   if ($findfile($ns.data(mts\),*.mts,0,1)) ns.st.line ok $findfile($ns.data(mts\),*.mts,0,1) MTS theme(s) in data\mts
   else ns.st.line warn no MTS themes in data\mts
+  ; every built-in theme: its 31 colours, a good palette of its own when it brings one (rgb=), and its gallery picture
+  var %ti = 1, %tid, %tbad
+  while ($gettok($ns.theme.ids,%ti,32) != $null) {
+    %tid = $v1
+    inc %ti
+    if ($numtok($readini($ns.theme.file,n,%tid,colors),44) != 31) %tbad = %tbad %tid $+ (colours)
+    elseif ($readini($ns.theme.file,n,%tid,rgb) != $null) && ($numtok($readini($ns.theme.file,n,%tid,rgb),32) != 16) %tbad = %tbad %tid $+ (palette)
+    elseif (!$exists($ns.asset($+(theme_,%tid,.png)))) %tbad = %tbad %tid $+ (picture)
+  }
+  if (%tbad) ns.st.line fail built-in theme problems: $ns.trim(%tbad)
+  else ns.st.line ok $numtok($ns.theme.ids,32) built-in themes, each with its colours and gallery picture
 
   ns.st.head Artwork
   %missing = $null
@@ -374,8 +385,17 @@ alias neon.selftest {
   if ($isalias(ns.ui.on)) {
     if (!$exists($ns.ui.dll)) ns.st.line ok native UI helper: neonui.dll is not installed (optional)
     elseif (!$ns.ui.ready) ns.st.line fail neonui.dll does not match data\neonui.sha256 - it will not be used
-    elseif ($ns.ui.on) ns.st.line ok native UI helper is on: $ns.ui.cmd(ver)
+    elseif ($ns.ui.on) {
+      if ($ns.ui.cmd(ver) == $ns.ui.want) ns.st.line ok native UI helper is on: $ns.ui.cmd(ver)
+      else ns.st.line warn an older neonui.dll is still loaded ( $+ $ns.ui.cmd(ver) $+ ) - /neon reload swaps in the current one
+    }
     else ns.st.line ok native UI helper: verified, switched off (/neon ui on)
+  }
+  if ($isalias(ns.mn.auto)) {
+    ; a menu label with a lone ampersand loses the character after it ("Give admin ()"): rank symbols must come out doubled
+    var %amp = $ns.mn.auto(a)
+    if (%amp != $null) && ($regex(nsamp,%amp,/(?<!&)&(?!&)/)) ns.st.line fail menu label with a lone ampersand: %amp
+    if ($ns.esc($+(a,$chr(38),b)) !== $+(a,$chr(38),$chr(38),b)) ns.st.line fail ns.esc does not double an ampersand
   }
 
   ns.st.head Commands

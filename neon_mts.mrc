@@ -91,6 +91,17 @@ alias -l pal.save {
   }
   ns.set mts palette $ns.trim(%o)
 }
+; ns.mts.palset <16 "r,g,b" triplets>: take over mIRC's first 16 colours (the original ones are kept for ns.mts.palrestore)
+alias ns.mts.palset {
+  var %i = 1, %t
+  if ($numtok($1-,32) < 16) return
+  pal.save
+  while (%i <= 16) {
+    %t = $gettok($1-,%i,32)
+    color $calc(%i - 1) $rgb($gettok(%t,1,44),$gettok(%t,2,44),$gettok(%t,3,44))
+    inc %i
+  }
+}
 alias ns.mts.palrestore {
   var %p = $ns.get(mts,palette), %i = 1
   if (%p == $null) return
@@ -99,6 +110,32 @@ alias ns.mts.palrestore {
     inc %i
   }
   ns.del mts palette
+}
+
+; uninstalling hands the user's own 16 colours back (a theme with a palette of its own took them over)
+on *:SIGNAL:ns.uninstall:{ ns.mts.palrestore }
+; /neon palette restore | reset   - mIRC's first 16 colours: what you had before a theme replaced them, or mIRC's own defaults
+alias neon.palette {
+  var %c = $lower($1), %i = 0
+  if (%c == restore) {
+    if ($ns.get(mts,palette) == $null) {
+      ns.say no earlier palette was kept, so there is nothing to restore - /neon palette reset gives mIRC's own colours.
+      return
+    }
+    ns.mts.palrestore
+    ns.say your palette is back.
+    return
+  }
+  if (%c == reset) {
+    while (%i < 16) {
+      color -r %i
+      inc %i
+    }
+    ns.del mts palette
+    ns.say mIRC's own 16 colours are back.
+    return
+  }
+  ns.say usage: /neon palette restore (what you had before a theme took over) or /neon palette reset (mIRC's defaults)
 }
 
 ; ns.mts.apply <file.mts>
@@ -110,14 +147,9 @@ alias ns.mts.apply {
   }
   ; palette (RGBColors: 16 triplets "r,g,b r,g,b ...")
   var %rgb = $mget(rgbcolors), %i = 1, %t
-  if ($numtok(%rgb,32) >= 16) {
-    pal.save
-    while (%i <= 16) {
-      %t = $gettok(%rgb,%i,32)
-      color $calc(%i - 1) $rgb($gettok(%t,1,44),$gettok(%t,2,44),$gettok(%t,3,44))
-      inc %i
-    }
-  }
+  ; a theme without a palette of its own gives back the user's (a palette of an earlier theme must not linger)
+  if ($numtok(%rgb,32) >= 16) ns.mts.palset %rgb
+  else ns.mts.palrestore
   ; Colors (26 items in Colors-dialog order); the last five items are derived
   var %cols = $mget(colors), %items = $ns.theme.items, %n = $numtok(%cols,44)
   if (%n >= 12) {
